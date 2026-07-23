@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Fruit Ninja 5 Levels</title>
+
+<style>
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    text-align:center;
+    font-family:'Trebuchet MS',Arial,sans-serif;
+    min-height:100vh;
+    margin:0;
+    background:
+    linear-gradient(135deg,#81d4fa,#fff59d,#a5d6a7);
+    background-size:300% 300%; animation:;
+    animation:bgMove 10s infinite alternate;
+}
+
+
+@keyframes bgMove{
+    0%{background-position:left;}
+    100%{background-position:right;}
+}
+
+
+h1{
+    color:#e65100;
+    font-size:40px;
+    text-shadow:2px 3px white;
+}
+
+
+#menu{
+    width:500px;
+    margin:30px auto;
+    padding:25px;
+    background:rgba(255,255,255,.8);
+    border-radius:25px;
+    box-shadow:0 10px 30px #555;
+}
+
+
+#menu h2{
+    color:#2e7d32;
+}
+
+
+button{
+    padding:14px 25px;
+    margin:8px;
+    border:none;
+    border-radius:30px;
+    background:linear-gradient(#ff9800,#f4511e);
+    color:white;
+    font-size:16px;
+    font-weight:bold;
+    cursor:pointer;
+    box-shadow:0 5px 10px #999;
+    transition:.3s;
+}
+
+
+button:hover{
+    transform:scale(1.1);
+    background:linear-gradient(#ffb300,#e65100);
+}
+
+
+button:disabled{
+    background:#9e9e9e;
+    transform:none;
+}
+
+
+
+#stats{
+    margin:15px;
+    padding:12px;
+    display:inline-block;
+    background:white;
+    border-radius:20px;
+    font-size:22px;
+    font-weight:bold;
+    color:#1565c0;
+    box-shadow:0 5px 15px #777;
+}
+
+
+
+#hearts{
+    font-size:35px;
+    filter:drop-shadow(0 0 5px red);
+}
+
+
+
+#game{
+
+    width:850px;
+    height:520px;
+
+    margin:20px auto;
+
+    background:
+    linear-gradient(
+        rgba(255,255,255,.15),
+        rgba(0,150,255,.3)
+    ),
+    url("https://images.unsplash.com/photo-1542838132-92c53300491e");
+
+    background-size:cover;
+    background-position:center;
+
+    border:8px solid #2e7d32;
+
+    border-radius:25px;
+
+    position:relative;
+
+    overflow:hidden;
+
+    display:none;
+
+    box-shadow:
+    0 0 30px #00e676,
+    inset 0 0 30px white;
+
+}
+
+
+
+#game:before{
+
+content:"";
+
+position:absolute;
+
+width:100%;
+height:100%;
+
+background:
+radial-gradient(circle,#ffffff55 2px,transparent 3px);
+
+background-size:40px 40px;
+
+animation:sparkle 3s linear infinite;
+
+}
+
+
+
+@keyframes sparkle{
+
+from{
+transform:translateY(0);
+}
+
+to{
+transform:translateY(40px);
+}
+
+}
+
+
+
+.fruit,.bomb{
+
+position:absolute;
+
+font-size:55px;
+
+cursor:pointer;
+
+filter:
+drop-shadow(0 5px 5px #333);
+
+animation:spin .4s infinite alternate;
+
+}
+
+
+
+@keyframes spin{
+
+from{
+transform:rotate(-10deg);
+}
+
+to{
+transform:rotate(10deg);
+}
+
+}
+
+
+
+#trail{
+
+position:absolute;
+
+width:35px;
+height:35px;
+
+background:white;
+
+border-radius:50%;
+
+box-shadow:
+0 0 20px cyan,
+0 0 40px white;
+
+pointer-events:none;
+
+}
+
+
+
+.trail{
+
+position:absolute;
+
+width:15px;
+height:15px;
+
+background:#fff;
+
+border-radius:50%;
+
+box-shadow:0 0 15px cyan;
+
+animation:fade .5s;
+
+}
+
+
+
+@keyframes fade{
+
+from{
+opacity:1;
+transform:scale(1);
+}
+
+to{
+opacity:0;
+transform:scale(3);
+}
+
+}
+
+
+
+#gameOver{
+
+display:none;
+
+background:rgba(255,255,255,.9);
+
+width:400px;
+
+margin:40px auto;
+
+padding:30px;
+
+border-radius:25px;
+
+box-shadow:0 10px 30px #555;
+
+}
+
+
+
+#gameOver h1{
+
+color:#d50000;
+
+}
+.cutEffect{
+    position:absolute;
+    font-size:55px;
+    pointer-events:none;
+    animation:cut .5s forwards;
+}
+
+@keyframes cut{
+    0%{
+        opacity:1;
+        transform:scale(1) rotate(0deg);
+    }
+
+    50%{
+        opacity:1;
+    }
+
+    100%{
+        opacity:0;
+        transform:
+        scale(1.5)
+        rotate(180deg)
+        translateY(-80px);
+    }
+}
+
+
+.juice{
+    position:absolute;
+    width:20px;
+    height:20px;
+    background:#ff1744;
+    border-radius:50%;
+    pointer-events:none;
+    animation:splash .5s forwards;
+}
+
+
+@keyframes splash{
+
+from{
+    opacity:1;
+    transform:scale(1);
+}
+
+to{
+    opacity:0;
+    transform:
+    scale(4)
+    translateY(-50px);
+}
+
+}
+
+.knife{
+    position:absolute;
+    font-size:45px;
+    pointer-events:none;
+    z-index:10;
+    transform:rotate(-45deg);
+    filter:drop-shadow(0 5px 5px #333);
+}
+
+
+
+
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<h1>🍎 Fruit,Vegetable Ninja Nutrition Challenge 🍉</h1>
+
+
+<div id="menu">
+
+<h2>Select Level</h2>
+
+<p>
+Slice fruits and avoid bombs!
+Complete each level to unlock the next.
+</p>
+
+<div id="levels"></div>
+
+</div>
+
+
+
+<div id="stats"></div>
+
+<div id="hearts"></div>
+
+
+<div id="game">
+
+<div id="trail"></div>
+
+</div>
+
+
+<div id="gameOver">
+
+<h1>💀 Game Over</h1>
+
+<button onclick="restart()">Restart Level</button>
+
+</div>
+
+
+
+<script>
+
+
+let unlocked=1;
+let level=1;
+
+let score=0;
+let combo=1;
+let hearts=5;
+
+speed=(2+level)*2.5;
+
+let playing=true;
+
+
+let fruits=[
+"🍎","🍌","🍊","🍉","🍓","🍍","🥭","🍄","🥒","🥕","🥦","🥬","🥥"
+];
+
+
+let game=document.getElementById("game");
+let trail=document.getElementById("trail");
+
+let knife=document.createElement("div");
+
+knife.className="knife";
+knife.innerHTML="🔪";
+
+game.appendChild(knife);
+
+
+
+
+function createLevels(){
+
+let box=document.getElementById("levels");
+
+box.innerHTML="";
+
+
+for(let i=1;i<=5;i++){
+
+let b=document.createElement("button");
+
+b.innerHTML="Level "+i;
+
+if(i>unlocked)
+b.disabled=true;
+
+
+b.onclick=()=>startLevel(i);
+
+
+box.appendChild(b);
+
+}
+
+
+}
+
+
+createLevels();
+
+
+
+function startLevel(l){
+
+level=l;
+
+score=0;
+combo=1;
+hearts=5;
+
+speed=2+level;
+
+
+playing=true;
+
+
+document.getElementById("menu").style.display="none";
+
+game.style.display="block";
+
+document.getElementById("gameOver").style.display="none";
+
+
+update();
+
+spawn();
+
+
+}
+
+
+
+function update(){
+
+
+document.getElementById("stats").innerHTML=
+"Level "+level+
+" | Score: "+score+
+" | Combo x"+combo;
+
+
+let h="";
+
+for(let i=0;i<hearts;i++)
+h+="❤️";
+
+
+document.getElementById("hearts").innerHTML=h;
+
+
+}
+
+
+
+function spawn(){
+
+
+if(!playing)return;
+
+
+let item=document.createElement("div");
+
+
+if(Math.random()<0.2){
+
+item.className="bomb";
+item.innerHTML="💣","💥";
+
+}else{
+
+item.className="fruit";
+item.innerHTML=
+fruits[Math.floor(Math.random()*fruits.length)];
+
+}
+
+
+
+item.style.left=Math.random()*750+"px";
+item.style.top="520px";
+
+
+game.appendChild(item);
+
+
+
+let fall=setInterval(()=>{
+
+
+let y=parseInt(item.style.top);
+
+
+y-=speed;
+
+
+item.style.top=y+"px";
+
+
+
+if(y<-70){
+
+item.remove();
+
+clearInterval(fall);
+
+combo=1;
+
+update();
+
+}
+
+
+},20);
+
+
+
+setTimeout(spawn,600-level*50);
+
+
+
+
+}
+
+
+
+
+document.addEventListener("mousemove",slice);
+
+
+
+function slice(e){
+
+
+if(!playing)return;
+
+
+let rect=game.getBoundingClientRect();
+
+
+let x=e.clientX-rect.left;
+let y=e.clientY-rect.top;
+
+knife.style.left=x+"px";
+knife.style.top=y+"px";
+
+
+
+trail.style.left=x+"px";
+trail.style.top=y+"px";
+
+
+
+
+let t=document.createElement("div");
+
+t.className="trail";
+
+t.style.left=x+"px";
+t.style.top=y+"px";
+
+
+game.appendChild(t);
+
+
+setTimeout(()=>t.remove(),400);
+
+
+
+document.querySelectorAll(".fruit,.bomb")
+.forEach(item=>{
+
+
+let r=item.getBoundingClientRect();
+
+
+
+if(
+e.clientX>r.left &&
+e.clientX<r.right &&
+e.clientY>r.top &&
+e.clientY<r.bottom
+){
+
+
+if(item.className=="fruit"){
+
+
+score+=10*combo;
+
+combo++;
+
+
+}
+
+
+else{
+
+
+hearts--;
+
+combo=1;
+
+
+if(hearts<=0){
+
+gameOver();
+
+}
+
+
+}
+
+
+// Create sliced fruit effect
+let cut=item.cloneNode(true);
+cut.className="cutEffect";
+
+cut.style.left=item.style.left;
+cut.style.top=item.style.top;
+
+game.appendChild(cut);
+
+
+// Create juice splash
+for(let i=0;i<5;i++){
+
+let juice=document.createElement("div");
+
+juice.className="juice";
+
+juice.style.left=(parseInt(item.style.left)+Math.random()*50)+"px";
+juice.style.top=(parseInt(item.style.top)+Math.random()*50)+"px";
+
+game.appendChild(juice);
+
+setTimeout(()=>{
+juice.remove();
+},500);
+
+}
+
+
+setTimeout(()=>{
+cut.remove();
+},500);
+
+
+// remove original fruit
+item.remove();
+
+
+update();
+
+
+if(score>=level*500){
+
+completeLevel();
+
+}
+
+
+}
+
+
+});
+
+
+}
+
+
+
+
+function completeLevel(){
+
+
+playing=false;
+
+game.style.display="none";
+
+
+if(level<5){
+
+unlocked=level+1;
+
+alert(
+"🎉 Level "+level+
+" Complete!\nLevel "+(level+1)+" Unlocked!"
+);
+
+
+}
+
+else{
+
+alert("🏆 You completed all 5 levels!");
+
+}
+
+
+document.getElementById("menu").style.display="block";
+
+createLevels();
+
+
+}
+
+
+
+
+function gameOver(){
+
+playing=false;
+
+game.style.display="none";
+
+document.getElementById("gameOver").style.display="block";
+
+
+}
+
+
+
+
+function restart(){
+
+document.getElementById("gameOver").style.display="none";
+
+startLevel(level);
+
+
+}
+
+
+
+</script>
+
+</body>
+</html>
