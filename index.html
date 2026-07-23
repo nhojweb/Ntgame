@@ -1,797 +1,945 @@
+Here is the complete, fully unified single-file code. It implements your exact requests:
+
+1. **❄️ Freeze now SLOWS DOWN** (15% speed) instead of completely pausing, allowing you to easily slice slow-floating fruit.
+2. **7 Upgradeable Knives** (Starter, Fire, Ice, Lightning, Golden, Diamond, Ninja) with unique trail colors and score bonuses.
+3. **Nutrition Month Design** embedded throughout the UI, backgrounds, and level themes.
+4. **Enhanced Slice Effects** (swooshing slash trail marks, juice bursts, and split halves).
+5. **Rich Synthesized Sounds** for slicing, bombs, freezing, coins, level transitions, and the shop.
+6. Missed fruit/vegetables do not remove hearts. Only bombs remove hearts.
+
+```html
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Fruit Ninja 5 Levels</title>
-
-<style>
-
-*{
-    box-sizing:border-box;
-}
-
-body{
-    text-align:center;
-    font-family:'Trebuchet MS',Arial,sans-serif;
-    min-height:100vh;
-    margin:0;
-    background:
-    linear-gradient(135deg,#81d4fa,#fff59d,#a5d6a7);
-    background-size:300% 300%; animation:;
-    animation:bgMove 10s infinite alternate;
-}
-
-
-@keyframes bgMove{
-    0%{background-position:left;}
-    100%{background-position:right;}
-}
-
-
-h1{
-    color:#e65100;
-    font-size:40px;
-    text-shadow:2px 3px white;
-}
-
-
-#menu{
-    width:500px;
-    margin:30px auto;
-    padding:25px;
-    background:rgba(255,255,255,.8);
-    border-radius:25px;
-    box-shadow:0 10px 30px #555;
-}
-
-
-#menu h2{
-    color:#2e7d32;
-}
-
-
-button{
-    padding:14px 25px;
-    margin:8px;
-    border:none;
-    border-radius:30px;
-    background:linear-gradient(#ff9800,#f4511e);
-    color:white;
-    font-size:16px;
-    font-weight:bold;
-    cursor:pointer;
-    box-shadow:0 5px 10px #999;
-    transition:.3s;
-}
-
-
-button:hover{
-    transform:scale(1.1);
-    background:linear-gradient(#ffb300,#e65100);
-}
-
-
-button:disabled{
-    background:#9e9e9e;
-    transform:none;
-}
-
-
-
-#stats{
-    margin:15px;
-    padding:12px;
-    display:inline-block;
-    background:white;
-    border-radius:20px;
-    font-size:22px;
-    font-weight:bold;
-    color:#1565c0;
-    box-shadow:0 5px 15px #777;
-}
-
-
-
-#hearts{
-    font-size:35px;
-    filter:drop-shadow(0 0 5px red);
-}
-
-
-
-#game{
-
-    width:850px;
-    height:520px;
-
-    margin:20px auto;
-
-    background:
-    linear-gradient(
-        rgba(255,255,255,.15),
-        rgba(0,150,255,.3)
-    ),
-    url("https://images.unsplash.com/photo-1542838132-92c53300491e");
-
-    background-size:cover;
-    background-position:center;
-
-    border:8px solid #2e7d32;
-
-    border-radius:25px;
-
-    position:relative;
-
-    overflow:hidden;
-
-    display:none;
-
-    box-shadow:
-    0 0 30px #00e676,
-    inset 0 0 30px white;
-
-}
-
-
-
-#game:before{
-
-content:"";
-
-position:absolute;
-
-width:100%;
-height:100%;
-
-background:
-radial-gradient(circle,#ffffff55 2px,transparent 3px);
-
-background-size:40px 40px;
-
-animation:sparkle 3s linear infinite;
-
-}
-
-
-
-@keyframes sparkle{
-
-from{
-transform:translateY(0);
-}
-
-to{
-transform:translateY(40px);
-}
-
-}
-
-
-
-.fruit,.bomb{
-
-position:absolute;
-
-font-size:55px;
-
-cursor:pointer;
-
-filter:
-drop-shadow(0 5px 5px #333);
-
-animation:spin .4s infinite alternate;
-
-}
-
-
-
-@keyframes spin{
-
-from{
-transform:rotate(-10deg);
-}
-
-to{
-transform:rotate(10deg);
-}
-
-}
-
-
-
-#trail{
-
-position:absolute;
-
-width:35px;
-height:35px;
-
-background:white;
-
-border-radius:50%;
-
-box-shadow:
-0 0 20px cyan,
-0 0 40px white;
-
-pointer-events:none;
-
-}
-
-
-
-.trail{
-
-position:absolute;
-
-width:15px;
-height:15px;
-
-background:#fff;
-
-border-radius:50%;
-
-box-shadow:0 0 15px cyan;
-
-animation:fade .5s;
-
-}
-
-
-
-@keyframes fade{
-
-from{
-opacity:1;
-transform:scale(1);
-}
-
-to{
-opacity:0;
-transform:scale(3);
-}
-
-}
-
-
-
-#gameOver{
-
-display:none;
-
-background:rgba(255,255,255,.9);
-
-width:400px;
-
-margin:40px auto;
-
-padding:30px;
-
-border-radius:25px;
-
-box-shadow:0 10px 30px #555;
-
-}
-
-
-
-#gameOver h1{
-
-color:#d50000;
-
-}
-.cutEffect{
-    position:absolute;
-    font-size:55px;
-    pointer-events:none;
-    animation:cut .5s forwards;
-}
-
-@keyframes cut{
-    0%{
-        opacity:1;
-        transform:scale(1) rotate(0deg);
-    }
-
-    50%{
-        opacity:1;
-    }
-
-    100%{
-        opacity:0;
-        transform:
-        scale(1.5)
-        rotate(180deg)
-        translateY(-80px);
-    }
-}
-
-
-.juice{
-    position:absolute;
-    width:20px;
-    height:20px;
-    background:#ff1744;
-    border-radius:50%;
-    pointer-events:none;
-    animation:splash .5s forwards;
-}
-
-
-@keyframes splash{
-
-from{
-    opacity:1;
-    transform:scale(1);
-}
-
-to{
-    opacity:0;
-    transform:
-    scale(4)
-    translateY(-50px);
-}
-
-}
-
-.knife{
-    position:absolute;
-    font-size:45px;
-    pointer-events:none;
-    z-index:10;
-    transform:rotate(-45deg);
-    filter:drop-shadow(0 5px 5px #333);
-}
-
-
-
-
-
-</style>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>Nutrition Month Fruit Ninja</title>
+    <style>
+        :root {
+            --panel: rgba(7, 19, 35, 0.92);
+            --border: rgba(255, 255, 255, 0.18);
+            --soft: rgba(255, 255, 255, 0.75);
+            --yellow: #ffd75e;
+            --green: #43e577;
+            --red: #ff4961;
+            --blue: #55dcff;
+            --trail: #55dcff;
+            --theme-glow: #55dcff;
+        }
+
+        * { box-sizing: border-box; margin: 0; }
+
+        html, body { min-height: 100%; }
+
+        body {
+            min-height: 100vh;
+            overflow-x: hidden;
+            color: white;
+            font-family: "Trebuchet MS", Arial, sans-serif;
+            background:
+                radial-gradient(circle at 15% 15%, rgba(80, 250, 123, 0.25), transparent 28%),
+                radial-gradient(circle at 85% 20%, rgba(255, 213, 79, 0.28), transparent 30%),
+                radial-gradient(circle at 50% 100%, rgba(46, 204, 113, 0.2), transparent 35%),
+                linear-gradient(135deg, #06111f, #0d3320, #10243b);
+            background-size: 160% 160%;
+            animation: bgMove 14s ease-in-out infinite alternate;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            opacity: 0.16;
+            background-image: radial-gradient(circle, white 1px, transparent 1px);
+            background-size: 48px 48px;
+        }
+
+        @keyframes bgMove { to { background-position: 100% 100%; } }
+        button { font: inherit; }
+
+        .app {
+            width: min(1120px, calc(100% - 24px));
+            margin: auto;
+            padding: 24px 0 45px;
+        }
+
+        .header { margin-bottom: 22px; text-align: center; }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 11px;
+            margin: 0;
+            font-size: clamp(1.8rem, 5.5vw, 4rem);
+            line-height: 1;
+            letter-spacing: -1.5px;
+        }
+
+        .logo strong {
+            color: transparent;
+            background: linear-gradient(#fffcc5, #ff9639);
+            background-clip: text;
+            -webkit-background-clip: text;
+            filter: drop-shadow(0 4px rgba(0,0,0,0.3)) drop-shadow(0 0 15px rgba(255,145,45,0.35));
+        }
+
+        .logo-fruit { display: inline-block; animation: float 1.6s ease-in-out infinite alternate; }
+        .logo-fruit:last-child { animation-delay: -0.8s; }
+        @keyframes float { to { transform: translateY(-7px) rotate(7deg); } }
+
+        .subtitle { margin: 12px 0 0; color: var(--soft); font-weight: bold; }
+
+        .panel {
+            border: 1px solid var(--border);
+            border-radius: 27px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.09), rgba(255,255,255,0.03)), var(--panel);
+            box-shadow: 0 25px 70px rgba(0,0,0,0.4), inset 0 1px rgba(255,255,255,0.12);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+
+        /* MENU */
+        #menuScreen { max-width: 1000px; margin: auto; padding: clamp(18px, 4vw, 36px); }
+        .menu-top { text-align: center; }
+        .menu-top h2 { margin: 0 0 9px; font-size: clamp(1.5rem, 4vw, 2.4rem); }
+        .menu-top p { max-width: 700px; margin: auto; color: var(--soft); line-height: 1.6; }
+
+        .wallet {
+            display: inline-flex; gap: 8px; align-items: center; margin-top: 15px; padding: 9px 16px;
+            border: 1px solid rgba(255,220,80,0.3); border-radius: 999px;
+            color: var(--yellow); background: rgba(255,210,55,0.1); font-weight: 900;
+        }
+
+        .instructions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 24px 0; }
+        .instruction {
+            padding: 14px 10px; border: 1px solid rgba(255,255,255,0.1); border-radius: 17px;
+            background: rgba(255,255,255,0.06); text-align: center;
+        }
+        .instruction span { display: block; margin-bottom: 6px; font-size: 1.7rem; }
+        .instruction small { color: var(--soft); font-weight: bold; }
+
+        .section-title { margin: 28px 0 13px; font-size: 1.25rem; }
+
+        /* MODES */
+        .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .mode-button {
+            padding: 17px 12px; border: 1px solid var(--border); border-radius: 18px;
+            color: white; background: rgba(255,255,255,0.07); cursor: pointer; font-weight: 900; transition: 0.2s;
+        }
+        .mode-button span { display: block; margin-bottom: 7px; font-size: 1.8rem; }
+        .mode-button small { display: block; margin-top: 5px; color: var(--soft); font-weight: normal; }
+        .mode-button.active, .mode-button:hover {
+            transform: translateY(-4px); border-color: rgba(80,250,123,0.7); background: rgba(80,250,123,0.15);
+        }
+
+        /* LEVELS */
+        #levelSection { display: block; }
+        #levels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+
+        .level-button {
+            position: relative; min-height: 230px; padding: 13px 8px; overflow: hidden;
+            border: 1px solid var(--border); border-radius: 19px; color: white; cursor: pointer;
+            background: radial-gradient(circle at 50% 0, rgba(80,250,123,0.22), transparent 55%), rgba(255,255,255,0.065);
+            box-shadow: 0 11px 24px rgba(0,0,0,0.22); transition: 0.22s;
+        }
+        .level-button:not(:disabled):hover { z-index: 2; transform: translateY(-6px); border-color: rgba(80,250,123,0.8); }
+        .level-button:disabled { cursor: not-allowed; opacity: 0.4; filter: grayscale(0.9); }
+
+        .level-number { display: block; color: var(--green); font-size: 1.9rem; font-weight: 900; }
+        .difficulty { display: inline-block; margin: 4px 0; padding: 4px 9px; border-radius: 999px; background: var(--difficulty); font-size: 0.65rem; font-weight: 900; text-transform: uppercase; }
+        .level-info { display: block; margin-top: 4px; color: var(--soft); font-size: 0.7rem; font-weight: bold; }
+        .level-theme-icon { display: block; margin-bottom: 2px; font-size: 1.6rem; }
+        .level-theme { display: block; margin: 2px 0; overflow: hidden; color: white; font-size: 0.73rem; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+        .nutrition-objective { display: block; margin-top: 4px; color: rgba(100,255,180,0.9); font-size: 0.64rem; font-weight: bold; line-height: 1.25; }
+        .level-lock { position: absolute; top: 8px; right: 9px; }
+
+        /* SHOP */
+        .shop-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 28px; }
+        .shop-header .section-title { margin: 0; }
+
+        #blades { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 13px; }
+        .blade-card { padding: 15px 10px; border: 1px solid var(--border); border-radius: 18px; background: rgba(255,255,255,0.06); text-align: center; }
+        .blade-card.selected { border-color: var(--green); box-shadow: 0 0 18px rgba(80,250,123,0.25); }
+        .blade-icon { display: block; margin-bottom: 7px; font-size: 2.7rem; }
+        .blade-name { display: block; font-weight: 900; font-size: 0.9rem; }
+        .blade-level, .blade-power { display: block; margin-top: 5px; color: var(--soft); font-size: 0.72rem; }
+
+        .shop-button {
+            width: 100%; margin-top: 10px; padding: 9px 7px; border: 0; border-radius: 999px;
+            color: white; background: linear-gradient(135deg, #43e577, #1e8449); cursor: pointer; font-size: 0.78rem; font-weight: 900;
+        }
+        .shop-button:disabled { cursor: not-allowed; opacity: 0.45; background: #555; }
+
+        /* GAME HUD */
+        #gameScreen { display: none; }
+        .hud { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .hud-group { display: flex; align-items: center; gap: 8px; }
+        .hud-group.right { justify-content: flex-end; }
+
+        .stat {
+            min-width: 92px; padding: 8px 11px; border: 1px solid var(--border); border-radius: 15px;
+            background: rgba(4,14,28,0.82); text-align: center;
+        }
+        .stat-label { display: block; color: var(--soft); font-size: 0.59rem; font-weight: 900; letter-spacing: 0.8px; text-transform: uppercase; }
+        .stat-value { display: block; margin-top: 2px; font-size: 1.1rem; font-weight: 900; }
+        #scoreValue { color: var(--yellow); }
+        #comboValue { color: var(--blue); }
+        #coinValue { color: var(--yellow); }
+
+        #hearts { min-width: 130px; font-size: clamp(1rem, 3vw, 1.65rem); white-space: nowrap; }
+        .empty-heart { opacity: 0.17; filter: grayscale(1); }
+
+        .icon-button {
+            width: 43px; height: 43px; padding: 0; border: 1px solid var(--border); border-radius: 14px;
+            color: white; background: rgba(4,14,28,0.82); cursor: pointer;
+        }
+
+        .objective-panel { width: min(390px, 100%); }
+        .objective-text { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 7px; color: var(--soft); font-size: 0.67rem; font-weight: 900; text-transform: uppercase; }
+        .progress { height: 11px; overflow: hidden; border: 1px solid var(--border); border-radius: 999px; background: rgba(0,0,0,0.34); }
+        #progressBar {
+            width: 0; height: 100%; border-radius: inherit;
+            background: linear-gradient(90deg, #34e775, #ffe15b, #ff7f25);
+            box-shadow: 0 0 16px rgba(54,232,115,0.5); transition: width 0.2s;
+        }
+
+        /* GAME AREA */
+        #game {
+            position: relative; width: 100%; max-height: 650px; overflow: hidden;
+            aspect-ratio: 16 / 9; touch-action: none; user-select: none; cursor: crosshair;
+            border: 2px solid rgba(100,255,155,0.6); border-radius: clamp(20px, 4vw, 33px);
+            background:
+                radial-gradient(circle at 75% 15%, rgba(255,243,166,0.9) 0 4%, transparent 4.5%),
+                linear-gradient(rgba(69,191,255,0.2), transparent 55%),
+                linear-gradient(#174a78 0%, #1c717d 49%, #1a6248 50%, #103a2c 100%);
+            box-shadow: 0 25px 70px rgba(0,0,0,0.4), inset 0 0 65px rgba(0,0,0,0.27);
+            transition: background 0.65s ease, border-color 0.65s ease, box-shadow 0.65s ease;
+        }
+
+        #game::before {
+            content: var(--left-decoration, "🌳"); position: absolute; left: -4%; bottom: -3%; z-index: 0;
+            font-size: clamp(8rem, 22vw, 18rem); opacity: 0.5; filter: brightness(0.65); pointer-events: none;
+        }
+        #game::after {
+            content: var(--right-decoration, "🌴"); position: absolute; right: -3%; bottom: -7%; z-index: 0;
+            font-size: clamp(8rem, 22vw, 18rem); opacity: 0.5; filter: brightness(0.65); transform: scaleX(-1); pointer-events: none;
+        }
+
+        #nutritionBanner {
+            position: absolute; top: 15px; left: 50%; z-index: 8; display: flex; align-items: center; gap: 11px;
+            width: min(440px, calc(100% - 30px)); padding: 10px 16px;
+            border: 1px solid rgba(255,255,255,0.22); border-radius: 18px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05)), rgba(5,18,31,0.75);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3), 0 0 18px var(--theme-glow, #55dcff);
+            backdrop-filter: blur(12px); pointer-events: none; transform: translateX(-50%);
+            transition: background 0.4s, box-shadow 0.4s;
+        }
+        #themeIcon { flex: 0 0 auto; font-size: clamp(1.8rem, 5vw, 2.8rem); filter: drop-shadow(0 0 8px var(--theme-glow, #55dcff)); animation: themeIconFloat 1.5s ease-in-out infinite alternate; }
+        #nutritionBanner div { min-width: 0; text-align: left; }
+        #themeName { display: block; overflow: hidden; color: white; font-size: clamp(0.85rem, 3vw, 1.1rem); font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+        #themeTip { display: block; margin-top: 3px; overflow: hidden; color: rgba(255,255,255,0.72); font-size: clamp(0.58rem, 2.2vw, 0.74rem); text-overflow: ellipsis; white-space: nowrap; }
+        @keyframes themeIconFloat { to { transform: translateY(-4px) rotate(7deg); } }
+
+        #entityLayer, #effectLayer, #slashLayer { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+        #effectLayer { z-index: 6; }
+        #slashLayer { z-index: 5; }
+        #trailCanvas { position: absolute; inset: 0; z-index: 4; width: 100%; height: 100%; pointer-events: none; }
+
+        .entity {
+            position: absolute; top: 0; left: 0; z-index: 4; display: grid; place-items: center;
+            font-size: clamp(2.6rem, 6vw, 4.4rem); line-height: 1; will-change: transform;
+            filter: drop-shadow(0 8px 7px rgba(0,0,0,0.55)) drop-shadow(0 0 8px rgba(255,255,255,0.12));
+            transition: filter 0.15s;
+        }
+        .entity.bomb { filter: drop-shadow(0 0 13px rgba(255,65,35,0.6)) drop-shadow(0 8px 7px rgba(0,0,0,0.7)); }
+        .entity.ice { filter: drop-shadow(0 0 15px #5ce5ff) drop-shadow(0 8px 7px rgba(0,0,0,0.55)); }
+        .entity.coin { filter: drop-shadow(0 0 15px #ffd83d) drop-shadow(0 8px 7px rgba(0,0,0,0.55)); }
+        .entity.frozen-food {
+            filter: saturate(0.6) brightness(1.3) drop-shadow(0 0 22px #75e9ff) drop-shadow(0 8px 7px rgba(0,0,0,0.5)) !important;
+        }
+
+        #blade {
+            position: absolute; z-index: 9; display: none; pointer-events: none;
+            font-size: clamp(2rem, 6vw, 3.8rem); transform: translate(-15%, -85%) rotate(-42deg);
+            filter: drop-shadow(0 5px 4px rgba(0,0,0,0.7)) drop-shadow(0 0 12px var(--trail));
+        }
+
+        #freezeOverlay {
+            position: absolute; inset: 0; z-index: 7; display: none;
+            align-items: center; justify-content: center; pointer-events: none;
+            border: 6px solid rgba(104,226,255,0.6); border-radius: inherit;
+            background: rgba(100,220,255,0.08); /* Very transparent so you can still slice */
+            box-shadow: inset 0 0 80px rgba(92,224,255,0.35);
+        }
+        #freezeOverlay strong { color: white; font-size: clamp(2rem, 8vw, 5rem); text-shadow: 0 0 15px #39d9ff, 0 5px rgba(0,0,0,0.3); }
+
+        #pauseOverlay {
+            position: absolute; inset: 0; z-index: 20; display: none; place-items: center;
+            background: rgba(3,10,20,0.8); backdrop-filter: blur(7px);
+        }
+        #pauseOverlay strong { font-size: clamp(2.5rem, 8vw, 5rem); }
+
+        /* EFFECTS */
+        .particle {
+            position: absolute; width: 13px; height: 13px; border-radius: 50%;
+            background: var(--color); box-shadow: 0 0 12px var(--color); animation: particle 0.65s ease-out forwards;
+        }
+        @keyframes particle { to { opacity: 0; transform: translate(var(--x), var(--y)) scale(0.1); } }
+
+        .slice-copy {
+            position: absolute; z-index: 7; pointer-events: none; font-size: clamp(2.6rem, 6vw, 4.4rem);
+            animation: sliceCopy 0.6s ease-out forwards;
+        }
+        @keyframes sliceCopy {
+            from { opacity: 1; transform: translate(-50%, -50%); }
+            to { opacity: 0; transform: translate(calc(-50% + var(--x)), calc(-50% - 85px)) rotate(var(--r)) scale(1.35); }
+        }
+
+        .slash-mark {
+            position: absolute; z-index: 6; pointer-events: none; height: 4px;
+            background: linear-gradient(90deg, transparent, white, var(--trail), transparent);
+            box-shadow: 0 0 15px var(--trail); border-radius: 4px;
+            transform-origin: left center; animation: slashFade 0.3s ease-out forwards;
+        }
+        @keyframes slashFade { to { opacity: 0; transform: scaleX(1.5); } }
+
+        .popup {
+            position: absolute; z-index: 10; pointer-events: none; color: #fff2a3;
+            font-size: clamp(1rem, 4vw, 1.7rem); font-weight: 1000;
+            text-shadow: 0 3px #913300, 0 0 12px rgba(255,218,70,0.7); animation: popup 0.8s ease-out forwards;
+        }
+        .popup.danger { color: #ff7889; text-shadow: 0 3px #680010, 0 0 12px #ff405b; }
+        .popup.freeze { color: #c8f8ff; text-shadow: 0 3px #00718c, 0 0 13px #38dcff; }
+        .popup.coin { color: #ffe88a; text-shadow: 0 3px #7a6200, 0 0 12px #ffd83d; }
+        @keyframes popup {
+            from { opacity: 1; transform: translate(-50%, -40%) scale(0.7); }
+            35% { transform: translate(-50%, -95%) scale(1.25); }
+            to { opacity: 0; transform: translate(-50%, -180%) scale(1); }
+        }
+
+        .shake { animation: shake 0.35s linear; }
+        @keyframes shake {
+            0%, 100% { transform: translate(0); }
+            20% { transform: translate(-8px, 5px); }
+            40% { transform: translate(9px, -5px); }
+            60% { transform: translate(-6px, -4px); }
+            80% { transform: translate(6px, 4px); }
+        }
+
+        .theme-announcement {
+            position: absolute; top: 50%; left: 50%; z-index: 15;
+            width: min(480px, calc(100% - 35px)); padding: 20px;
+            border: 2px solid rgba(255,255,255,0.35); border-radius: 24px; color: white;
+            background: linear-gradient(135deg, rgba(80,250,123,0.2), rgba(255,255,255,0.05)), rgba(5,17,31,0.9);
+            box-shadow: 0 20px 55px rgba(0,0,0,0.4), 0 0 30px var(--theme-glow, #55dcff);
+            text-align: center; pointer-events: none; animation: themeAnn 2.3s ease forwards;
+        }
+        .theme-announcement span { display: block; margin-bottom: 8px; font-size: 3.7rem; }
+        .theme-announcement strong { display: block; color: #fff5b0; font-size: clamp(1.25rem, 5vw, 2rem); }
+        .theme-announcement small { display: block; margin-top: 8px; color: rgba(255,255,255,0.75); line-height: 1.4; }
+        @keyframes themeAnn {
+            0% { opacity: 0; transform: translate(-50%, -40%) scale(0.75); }
+            15%, 72% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -60%) scale(1.08); }
+        }
+
+        /* RESULT */
+        #resultScreen { display: none; max-width: 580px; margin: 35px auto; padding: clamp(25px, 6vw, 45px); text-align: center; }
+        #resultIcon { display: block; font-size: clamp(4rem, 12vw, 7rem); animation: float 0.8s ease-in-out infinite alternate; }
+        #resultTitle { margin: 12px 0; font-size: clamp(2rem, 6vw, 3.2rem); }
+        #resultMessage { color: var(--soft); line-height: 1.6; }
+        #resultScore { margin: 22px 0; color: var(--yellow); font-size: 1.25rem; font-weight: 900; line-height: 1.65; }
+        .button-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+        .main-button { padding: 12px 22px; border: 0; border-radius: 999px; color: white; cursor: pointer; font-weight: 900; box-shadow: 0 10px 22px rgba(0,0,0,0.25); }
+        .main-button.primary { background: linear-gradient(135deg, #43e577, #1e8449); }
+        .main-button.secondary { border: 1px solid var(--border); background: rgba(255,255,255,0.1); }
+
+        @media (max-width: 900px) {
+            #levels { grid-template-columns: repeat(3, 1fr); }
+            #blades { grid-template-columns: repeat(2, 1fr); }
+            .instructions { grid-template-columns: repeat(2, 1fr); }
+            .hud { grid-template-columns: 1fr auto; }
+            .objective-panel { grid-column: 1 / -1; grid-row: 2; width: 100%; }
+            .hud-group.right { grid-column: 2; grid-row: 1; }
+        }
+        @media (max-width: 650px) {
+            .app { width: calc(100% - 12px); padding-top: 16px; }
+            .instructions, .modes { grid-template-columns: 1fr; }
+            #levels { grid-template-columns: repeat(2, 1fr); }
+            .hud, .hud-group { gap: 5px; }
+            .stat { min-width: 60px; padding: 7px 5px; }
+            .stat-label { font-size: 0.49rem; }
+            .stat-value { font-size: 0.88rem; }
+            #hearts { min-width: 0; font-size: 0.85rem; }
+            .icon-button { width: 35px; height: 35px; border-radius: 11px; }
+            #game { aspect-ratio: 4 / 5; border-radius: 20px; }
+            .logo { gap: 5px; letter-spacing: -1px; }
+            #nutritionBanner { top: 9px; padding: 8px 11px; border-radius: 14px; }
+            #themeTip { max-width: 260px; }
+        }
+        @media (max-width: 390px) {
+            #blades { grid-template-columns: 1fr; }
+            .stat:nth-child(3) { display: none; }
+            #nutritionBanner { width: calc(100% - 18px); }
+            #themeTip { max-width: 210px; }
+        }
+    </style>
 </head>
-
-
 <body>
-
-
-<h1>🍎 Fruit,Vegetable Ninja Nutrition Challenge 🍉</h1>
-
-
-<div id="menu">
-
-<h2>Select Level</h2>
-
-<p>
-Slice fruits and avoid bombs!
-Complete each level to unlock the next.
-</p>
-
-<div id="levels"></div>
-
-</div>
-
-
-
-<div id="stats"></div>
-
-<div id="hearts"></div>
-
-
-<div id="game">
-
-<div id="trail"></div>
-
-</div>
-
-
-<div id="gameOver">
-
-<h1>💀 Game Over</h1>
-
-<button onclick="restart()">Restart Level</button>
-
-</div>
-
-
-
-<script>
-
-
-let unlocked=1;
-let level=1;
-
-let score=0;
-let combo=1;
-let hearts=5;
-
-speed=(2+level)*2.5;
-
-let playing=true;
-
-
-let fruits=[
-"🍎","🍌","🍊","🍉","🍓","🍍","🥭","🍄","🥒","🥕","🥦","🥬","🥥"
-];
-
-
-let game=document.getElementById("game");
-let trail=document.getElementById("trail");
-
-let knife=document.createElement("div");
-
-knife.className="knife";
-knife.innerHTML="🔪";
-
-game.appendChild(knife);
-
-
-
-
-function createLevels(){
-
-let box=document.getElementById("levels");
-
-box.innerHTML="";
-
-
-for(let i=1;i<=5;i++){
-
-let b=document.createElement("button");
-
-b.innerHTML="Level "+i;
-
-if(i>unlocked)
-b.disabled=true;
-
-
-b.onclick=()=>startLevel(i);
-
-
-box.appendChild(b);
-
-}
-
-
-}
-
-
-createLevels();
-
-
-
-function startLevel(l){
-
-level=l;
-
-score=0;
-combo=1;
-hearts=5;
-
-speed=2+level;
-
-
-playing=true;
-
-
-document.getElementById("menu").style.display="none";
-
-game.style.display="block";
-
-document.getElementById("gameOver").style.display="none";
-
-
-update();
-
-spawn();
-
-
-}
-
-
-
-function update(){
-
-
-document.getElementById("stats").innerHTML=
-"Level "+level+
-" | Score: "+score+
-" | Combo x"+combo;
-
-
-let h="";
-
-for(let i=0;i<hearts;i++)
-h+="❤️";
-
-
-document.getElementById("hearts").innerHTML=h;
-
-
-}
-
-
-
-function spawn(){
-
-
-if(!playing)return;
-
-
-let item=document.createElement("div");
-
-
-if(Math.random()<0.2){
-
-item.className="bomb";
-item.innerHTML="💣","💥";
-
-}else{
-
-item.className="fruit";
-item.innerHTML=
-fruits[Math.floor(Math.random()*fruits.length)];
-
-}
-
-
-
-item.style.left=Math.random()*750+"px";
-item.style.top="520px";
-
-
-game.appendChild(item);
-
-
-
-let fall=setInterval(()=>{
-
-
-let y=parseInt(item.style.top);
-
-
-y-=speed;
-
-
-item.style.top=y+"px";
-
-
-
-if(y<-70){
-
-item.remove();
-
-clearInterval(fall);
-
-combo=1;
-
-update();
-
-}
-
-
-},20);
-
-
-
-setTimeout(spawn,600-level*50);
-
-
-
-
-}
-
-
-
-
-document.addEventListener("mousemove",slice);
-
-
-
-function slice(e){
-
-
-if(!playing)return;
-
-
-let rect=game.getBoundingClientRect();
-
-
-let x=e.clientX-rect.left;
-let y=e.clientY-rect.top;
-
-knife.style.left=x+"px";
-knife.style.top=y+"px";
-
-
-
-trail.style.left=x+"px";
-trail.style.top=y+"px";
-
-
-
-
-let t=document.createElement("div");
-
-t.className="trail";
-
-t.style.left=x+"px";
-t.style.top=y+"px";
-
-
-game.appendChild(t);
-
-
-setTimeout(()=>t.remove(),400);
-
-
-
-document.querySelectorAll(".fruit,.bomb")
-.forEach(item=>{
-
-
-let r=item.getBoundingClientRect();
-
-
-
-if(
-e.clientX>r.left &&
-e.clientX<r.right &&
-e.clientY>r.top &&
-e.clientY<r.bottom
-){
-
-
-if(item.className=="fruit"){
-
-
-score+=10*combo;
-
-combo++;
-
-
-}
-
-
-else{
-
-
-hearts--;
-
-combo=1;
-
-
-if(hearts<=0){
-
-gameOver();
-
-}
-
-
-}
-
-
-// Create sliced fruit effect
-let cut=item.cloneNode(true);
-cut.className="cutEffect";
-
-cut.style.left=item.style.left;
-cut.style.top=item.style.top;
-
-game.appendChild(cut);
-
-
-// Create juice splash
-for(let i=0;i<5;i++){
-
-let juice=document.createElement("div");
-
-juice.className="juice";
-
-juice.style.left=(parseInt(item.style.left)+Math.random()*50)+"px";
-juice.style.top=(parseInt(item.style.top)+Math.random()*50)+"px";
-
-game.appendChild(juice);
-
-setTimeout(()=>{
-juice.remove();
-},500);
-
-}
-
-
-setTimeout(()=>{
-cut.remove();
-},500);
-
-
-// remove original fruit
-item.remove();
-
-
-update();
-
-
-if(score>=level*500){
-
-completeLevel();
-
-}
-
-
-}
-
-
-});
-
-
-}
-
-
-
-
-function completeLevel(){
-
-
-playing=false;
-
-game.style.display="none";
-
-
-if(level<5){
-
-unlocked=level+1;
-
-alert(
-"🎉 Level "+level+
-" Complete!\nLevel "+(level+1)+" Unlocked!"
-);
-
-
-}
-
-else{
-
-alert("🏆 You completed all 5 levels!");
-
-}
-
-
-document.getElementById("menu").style.display="block";
-
-createLevels();
-
-
-}
-
-
-
-
-function gameOver(){
-
-playing=false;
-
-game.style.display="none";
-
-document.getElementById("gameOver").style.display="block";
-
-
-}
-
-
-
-
-function restart(){
-
-document.getElementById("gameOver").style.display="none";
-
-startLevel(level);
-
-
-}
-
-
-
-</script>
-
+    <main class="app">
+        <header class="header">
+            <h1 class="logo">
+                <span class="logo-fruit">🥗</span>
+                <strong>Nutrition Month Ninja</strong>
+                <span class="logo-fruit">🍉</span>
+            </h1>
+            <p class="subtitle">🥦 Eat smart, slice fast! Nutrition Month Adventure.</p>
+        </header>
+
+        <section id="menuScreen" class="panel">
+            <div class="menu-top">
+                <h2>Nutrition Month Adventure</h2>
+                <p>Missing fruit or vegetables does NOT remove hearts. Only slicing bombs removes a heart. ❄️ slows down time!</p>
+                <div class="wallet">🪙 Coins: <span id="menuCoins">0</span></div>
+            </div>
+            <div class="instructions">
+                <div class="instruction"><span>🍎</span><small>Slice food to score</small></div>
+                <div class="instruction"><span>❄️</span><small>Slows everything for 3 seconds</small></div>
+                <div class="instruction"><span>💣</span><small>Bombs remove one heart</small></div>
+                <div class="instruction"><span>🪙</span><small>Earn coins for blades</small></div>
+            </div>
+            <h3 class="section-title">Game Modes</h3>
+            <div class="modes">
+                <button class="mode-button active" data-mode="levels" type="button"><span>🏆</span>Levels<small>15 Nutrition Themes</small></button>
+                <button class="mode-button" data-mode="arcade" type="button"><span>⏱️</span>Arcade<small>60-second rush</small></button>
+                <button class="mode-button" data-mode="zen" type="button"><span>🧘</span>Zen<small>60s, no bombs</small></button>
+            </div>
+            <div id="levelSection">
+                <h3 class="section-title">Choose Nutrition Level</h3>
+                <div id="levels"></div>
+            </div>
+            <div class="shop-header">
+                <h3 class="section-title">Blade Shop</h3>
+                <span class="wallet">🪙 <span id="shopCoins">0</span></span>
+            </div>
+            <div id="blades"></div>
+        </section>
+
+        <section id="gameScreen">
+            <div class="hud">
+                <div class="hud-group">
+                    <div class="stat"><span class="stat-label">Level</span><span id="levelValue" class="stat-value">1</span></div>
+                    <div class="stat"><span class="stat-label">Score</span><span id="scoreValue" class="stat-value">0</span></div>
+                    <div class="stat"><span class="stat-label">Combo</span><span id="comboValue" class="stat-value">x1</span></div>
+                    <div class="stat"><span class="stat-label">Coins</span><span id="coinValue" class="stat-value">0</span></div>
+                </div>
+                <div class="objective-panel">
+                    <div class="objective-text">
+                        <span id="objectiveName">Objective</span>
+                        <span id="objectiveValue">0 / 250</span>
+                    </div>
+                    <div class="progress"><div id="progressBar"></div></div>
+                </div>
+                <div class="hud-group right">
+                    <div id="hearts"></div>
+                    <button id="soundButton" class="icon-button" type="button" aria-label="Sound">🔊</button>
+                    <button id="pauseButton" class="icon-button" type="button" aria-label="Pause">⏸</button>
+                    <button id="exitButton" class="icon-button" type="button" aria-label="Exit">✕</button>
+                </div>
+            </div>
+
+            <div id="game">
+                <div id="nutritionBanner">
+                    <span id="themeIcon">🌈</span>
+                    <div>
+                        <strong id="themeName">Eat the Rainbow</strong>
+                        <small id="themeTip">Colorful food provides different nutrients.</small>
+                    </div>
+                </div>
+                <div id="entityLayer"></div>
+                <canvas id="trailCanvas"></canvas>
+                <div id="slashLayer"></div>
+                <div id="effectLayer"></div>
+                <div id="blade">🔪</div>
+                <div id="freezeOverlay"><strong>❄️ SLOW-MO!</strong></div>
+                <div id="pauseOverlay"><strong>Paused</strong></div>
+            </div>
+        </section>
+
+        <section id="resultScreen" class="panel">
+            <span id="resultIcon">🏆</span>
+            <h2 id="resultTitle">Level Complete!</h2>
+            <p id="resultMessage"></p>
+            <div id="resultScore"></div>
+            <div class="button-row">
+                <button id="menuButton" class="main-button secondary" type="button">Main Menu</button>
+                <button id="replayButton" class="main-button secondary" type="button">Play Again</button>
+                <button id="nextButton" class="main-button primary" type="button">Next Level</button>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        "use strict";
+
+        const MAX_HEARTS = 5;
+        const FREEZE_TIME = 3000;
+        const FREEZE_SPEED_FACTOR = 0.15; // Slows to 15% speed
+
+        const NUTRITION_THEMES = [
+            { icon:"🌈", name:"Eat the Rainbow", objective:"Slice colorful food", tip:"Different food colors provide different nutrients.", foods:["🍎","🍊","🍌","🥦","🫐","🍇","茄子"], sky:"#5ec9ff", middle:"#5acb9a", ground:"#2d7547", glow:"#f7dd55", left:"🍎", right:"🥦" },
+            { icon:"🍓", name:"Fruit Power", objective:"Build a healthy fruit basket", tip:"Fruit provides vitamins, minerals and fiber.", foods:["🍎","🍌","🍊","🍉","🍓","菠萝","🥝"], sky:"#ff9bba", middle:"#ffb65d", ground:"#6c9c46", glow:"#ffdf57", left:"🍓", right:"🍍" },
+            { icon:"🥦", name:"Vegetable Garden", objective:"Slice fresh vegetables", tip:"Vegetables help support growth and immunity.", foods:["🥕","🥒","🥦","玉米","番茄","茄子","🥬"], sky:"#77d98b", middle:"#3cab69", ground:"#174f31", glow:"#80ff8d", left:"🥕", right:"🥦" },
+            { icon:"💧", name:"Hydration Station", objective:"Choose water-rich food", tip:"Drink water regularly, especially during activity.", foods:["西瓜","🥒","橙子","草莓","🍈","菠萝","桃子"], sky:"#56d8ff", middle:"#258fc8", ground:"#125b83", glow:"#62edff", left:"💧", right:"🍉" },
+            { icon:"🌅", name:"Breakfast Boost", objective:"Build an energizing breakfast", tip:"A balanced breakfast helps fuel your morning.", foods:["香蕉","苹果","鸡蛋","牛奶","面包","麦片","草莓"], sky:"#ffbb57", middle:"#ef7f4b", ground:"#77523a", glow:"#ffe07a", left:"🥣", right:"🍌" },
+            { icon:"🌾", name:"Whole Grain Energy", objective:"Collect energy-giving foods", tip:"Whole grains provide lasting energy and fiber.", foods:["面包","玉米","米饭","麦片","红薯","土豆","香蕉"], sky:"#eac56b", middle:"#bb8945", ground:"#614425", glow:"#ffe095", left:"🌾", right:"面包" },
+            { icon:"💪", name:"Protein Power", objective:"Slice protein-rich foods", tip:"Protein supports muscles, growth and body repair.", foods:["鸡蛋","鱼","鸡肉","花生","豆子","豌豆","牛奶"], sky:"#bf88ed", middle:"#7550ad", ground:"#38295d", glow:"#dda4ff", left:"🥚", right:"🐟" },
+            { icon:"🦴", name:"Strong Bones", objective:"Collect calcium-rich foods", tip:"Calcium and vitamin D help build strong bones.", foods:["牛奶","奶酪","西兰花","绿叶菜","鱼","豆子","鸡蛋"], sky:"#a6e8ff", middle:"#6ca9d3", ground:"#315d85", glow:"#e0fbff", left:"🥛", right:"🧀" },
+            { icon:"🍊", name:"Vitamin C Shield", objective:"Strengthen your vitamin shield", tip:"Vitamin C supports immunity and healthy skin.", foods:["橙子","草莓","猕猴桃","菠萝","柠檬","番茄","辣椒"], sky:"#ffbd63", middle:"#f47635", ground:"#984029", glow:"#fff06c", left:"🍊", right:"🥝" },
+            { icon:"🩸", name:"Iron Strength", objective:"Collect iron-supporting foods", tip:"Iron helps transport oxygen around your body.", foods:["🥬","🥦","豆子","豌豆","🥚","鱼","鸡肉"], sky:"#e25b65", middle:"#9f3347", ground:"#501e31", glow:"#ff7e88", left:"🥬", right:"🫘" },
+            { icon:"🌿", name:"Fiber Forest", objective:"Find high-fiber foods", tip:"Fiber supports healthy digestion and fullness.", foods:["苹果","梨","西兰花","胡萝卜","豆子","玉米","面包"], sky:"#75c978", middle:"#3c8955", ground:"#19462f", glow:"#a1ff93", left:"梨", right:"豆子" },
+            { icon:"🍬", name:"Smart Sugar Choices", objective:"Choose naturally sweet foods", tip:"Choose whole fruit more often than sugary snacks.", foods:["苹果","香蕉","草莓","葡萄","桃子","芒果","西瓜"], sky:"#f28bc0", middle:"#ae579f", ground:"#583667", glow:"#ffb3df", left:"草莓", right:"葡萄" },
+            { icon:"❤️", name:"Heart Healthy", objective:"Collect heart-friendly foods", tip:"Fruit, vegetables and healthy fats support the heart.", foods:["鱼","花生","蓝莓","苹果","西兰花","豆子","沙拉"], sky:"#ff6f76", middle:"#bd374c", ground:"#591f33", glow:"#ff929b", left:"❤️", right:"🐟" },
+            { icon:"🍽️", name:"Balanced Plate", objective:"Create a balanced meal", tip:"Fill half your plate with fruit and vegetables.", foods:["沙拉","西兰花","苹果","米饭","鱼","鸡蛋","牛奶"], sky:"#5fc7dd", middle:"#5a9e77", ground:"#315948", glow:"#f1e87b", left:"🥗", right:"🍽️" },
+            { icon:"👑", name:"Nutrition Champion", objective:"Master every healthy food group", tip:"Balance, variety and moderation build healthy habits.", foods:["苹果","橙子","西兰花","胡萝卜","鸡蛋","鱼","牛奶","面包","豆子","沙拉"], sky:"#8055c9", middle:"#422f82", ground:"#181c3f", glow:"#ffd75e", left:"🏆", right:"👑" }
+        ];
+
+        const fixFoods = foods => foods.map(f => {
+            const map = { "茄子":"🍆", "菠萝":"🍍", "面包":"🍞", "玉米":"🌽", "米饭":"🍚", "麦片":"🥣", "红薯":"🍠", "土豆":"🥔", "香蕉":"🍌", "鸡肉":"🍗", "花生":"🥜", "豆子":"🫘", "豌豆":"🫛", "牛奶":"🥛", "奶酪":"🧀", "西兰花":"🥦", "绿叶菜":"🥬", "鱼":"🐟", "鸡蛋":"🥚", "橙子":"🍊", "草莓":"🍓", "猕猴桃":"🥝", "柠檬":"🍋", "番茄":"🍅", "辣椒":"🫑", "苹果":"🍎", "梨":"🍐", "胡萝卜":"🥕", "葡萄":"🍇", "桃子":"🍑", "芒果":"🥭", "西瓜":"🍉", "蓝莓":"🫐", "沙拉":"🥗" };
+            return map[f] || f;
+        });
+
+        const LEVELS = NUTRITION_THEMES.map((theme, index) => {
+            const level = index + 1;
+            return {
+                ...theme, foods: fixFoods(theme.foods),
+                goal: 200 + index * 180 + index * index * 22,
+                slices: 8 + index * 3,
+                speed: 0.88 + index * 0.055,
+                bombs: 0.06 + index * 0.012,
+                freeze: Math.max(0.035, 0.09 - index * 0.003),
+                spawn: Math.max(360, 920 - index * 39),
+                maxWave: Math.min(4, 1 + Math.floor(index / 4)),
+                difficulty: level <= 3 ? "Easy" : level <= 6 ? "Normal" : level <= 9 ? "Medium" : level <= 12 ? "Hard" : level <= 14 ? "Expert" : "Ninja",
+                difficultyColor: level <= 3 ? "#43a047" : level <= 6 ? "#00a9c7" : level <= 9 ? "#7958d5" : level <= 12 ? "#ee5a2c" : level <= 14 ? "#dc2646" : "#7c1741"
+            };
+        });
+
+        const TOTAL_LEVELS = LEVELS.length;
+
+        const FOOD = [
+            { emoji:"🍎", color:"#ff3455" }, { emoji:"🍌", color:"#ffe34f" }, { emoji:"🍊", color:"#ff8a20" },
+            { emoji:"🍉", color:"#ff3859" }, { emoji:"🍓", color:"#ff2b55" }, { emoji:"🍍", color:"#ffd330" },
+            { emoji:"🥭", color:"#ff9d2c" }, { emoji:"🥝", color:"#86d74d" }, { emoji:"🍑", color:"#ff8f79" },
+            { emoji:"🍐", color:"#b9dc55" }, { emoji:"🍇", color:"#8c45c7" }, { emoji:"🫐", color:"#5368d8" },
+            { emoji:"🍋", color:"#ffe23c" }, { emoji:"🥥", color:"#f7f0d8" }, { emoji:"🍈", color:"#aee36e" },
+            { emoji:"🥕", color:"#ff7426" }, { emoji:"🥒", color:"#56dc72" }, { emoji:"🥦", color:"#35bd63" },
+            { emoji:"🌽", color:"#ffe44d" }, { emoji:"🍅", color:"#ff3e45" }, { emoji:"🍆", color:"#984dc7" },
+            { emoji:"🫑", color:"#42d56c" }, { emoji:"🥬", color:"#59d967" }, { emoji:"🥔", color:"#c79a64" },
+            { emoji:"🍠", color:"#bd6f55" }, { emoji:"🫘", color:"#b05a45" }, { emoji:"🫛", color:"#69d264" },
+            { emoji:"🧅", color:"#d7b7d9" }, { emoji:"🧄", color:"#f1ead8" }, { emoji:"🍄", color:"#e6d5c7" },
+            { emoji:"🥚", color:"#fff0bd" }, { emoji:"🥛", color:"#f4fbff" }, { emoji:"🧀", color:"#ffd94e" },
+            { emoji:"🐟", color:"#65cbe8" }, { emoji:"🍗", color:"#d99560" }, { emoji:"🥜", color:"#bc7a42" },
+            { emoji:"🍞", color:"#d99f5d" }, { emoji:"🥣", color:"#d9ecff" }, { emoji:"🍚", color:"#fff9e8" },
+            { emoji:"🥗", color:"#54d66a" }
+        ];
+        const FOOD_BY_EMOJI = Object.fromEntries(FOOD.map(item => [item.emoji, item]));
+
+        const BLADES = [
+            { name:"Starter Blade", emoji:"🔪", price:0, baseBonus:1, trail:"#55dcff" },
+            { name:"Fire Blade", emoji:"🗡️", price:150, baseBonus:1.1, trail:"#ff6a24" },
+            { name:"Ice Blade", emoji:"🧊", price:300, baseBonus:1.2, trail:"#8cf3ff" },
+            { name:"Lightning Blade", emoji:"⚡", price:500, baseBonus:1.35, trail:"#ffe15b" },
+            { name:"Golden Blade", emoji:"🌟", price:800, baseBonus:1.5, trail:"#ffd75e" },
+            { name:"Diamond Blade", emoji:"💎", price:1200, baseBonus:1.75, trail:"#b9f2ff" },
+            { name:"Ninja Blade", emoji:"🥷", price:1800, baseBonus:2.0, trail:"#da65ff" }
+        ];
+
+        const $ = id => document.getElementById(id);
+        const menuScreen = $("menuScreen"); const gameScreen = $("gameScreen"); const resultScreen = $("resultScreen");
+        const levelsElement = $("levels"); const bladesElement = $("blades"); const levelSection = $("levelSection");
+        const menuCoins = $("menuCoins"); const shopCoins = $("shopCoins");
+        const game = $("game"); const entityLayer = $("entityLayer"); const effectLayer = $("effectLayer"); const slashLayer = $("slashLayer");
+        const trailCanvas = $("trailCanvas"); const context = trailCanvas.getContext("2d");
+        const bladeElement = $("blade"); const freezeOverlay = $("freezeOverlay"); const pauseOverlay = $("pauseOverlay");
+        const themeIcon = $("themeIcon"); const themeName = $("themeName"); const themeTip = $("themeTip");
+        const levelValue = $("levelValue"); const scoreValue = $("scoreValue"); const comboValue = $("comboValue"); const coinValue = $("coinValue");
+        const objectiveName = $("objectiveName"); const objectiveValue = $("objectiveValue"); const progressBar = $("progressBar"); const heartsElement = $("hearts");
+        const soundButton = $("soundButton"); const pauseButton = $("pauseButton"); const exitButton = $("exitButton");
+        const resultIcon = $("resultIcon"); const resultTitle = $("resultTitle"); const resultMessage = $("resultMessage"); const resultScore = $("resultScore");
+        const menuButton = $("menuButton"); const replayButton = $("replayButton"); const nextButton = $("nextButton");
+
+        let save = loadSave();
+        let currentMode = "levels"; let currentLevel = 1;
+        let score = 0; let slices = 0; let combo = 1; let bestCombo = 1; let hearts = MAX_HEARTS; let earnedCoins = 0; let timeLeft = 60;
+        let entities = []; let trailPoints = [];
+        let playing = false; let paused = false; let muted = false; let pointerActive = false;
+        let previousPointer = null; let spawnElapsed = 0; let timerElapsed = 0; let frozenUntil = 0; let lastTime = performance.now(); let audioContext = null;
+
+        function defaultSave() {
+            return { unlocked:1, coins:0, selectedBlade:0, ownedBlades: Array(BLADES.length).fill(false).map((_,i)=>i===0), bladeLevels: Array(BLADES.length).fill(1), highScores: Array(TOTAL_LEVELS).fill(0), arcadeBest:0, zenBest:0 };
+        }
+        function loadSave() {
+            const defaults = defaultSave();
+            try {
+                const stored = JSON.parse(localStorage.getItem("johnFruitNinjaSave")) || {};
+                return { ...defaults, ...stored, unlocked: Math.min(TOTAL_LEVELS, Math.max(1, Number(stored.unlocked) || 1)),
+                    ownedBlades: BLADES.map((_, i) => i === 0 || Boolean(stored.ownedBlades?.[i])),
+                    bladeLevels: BLADES.map((_, i) => Math.min(3, Math.max(1, Number(stored.bladeLevels?.[i]) || 1))),
+                    highScores: LEVELS.map((_, i) => Number(stored.highScores?.[i]) || 0)
+                };
+            } catch { return defaults; }
+        }
+        function saveGame() { try { localStorage.setItem("johnFruitNinjaSave", JSON.stringify(save)); } catch {} }
+        function currentBlade() { return BLADES[save.selectedBlade]; }
+        function bladeMultiplier() { return currentBlade().baseBonus + (save.bladeLevels[save.selectedBlade] - 1) * 0.12; }
+
+        function createLevels() {
+            levelsElement.innerHTML = "";
+            LEVELS.forEach((data, index) => {
+                const level = index + 1; const locked = level > save.unlocked;
+                const button = document.createElement("button"); button.type = "button"; button.className = "level-button"; button.disabled = locked;
+                button.style.borderColor = locked ? "" : `${data.glow}55`;
+                button.innerHTML = `<span class="level-number">${level}</span><span class="level-theme-icon">${data.icon}</span><span class="level-theme">${data.name}</span><span class="difficulty" style="--difficulty:${data.difficultyColor}">${data.difficulty}</span><span class="level-info">🎯 ${data.goal.toLocaleString()} score</span><span class="level-info">🍎 ${data.slices} slices</span><span class="nutrition-objective">${data.objective}</span><span class="level-info">🏆 ${save.highScores[index].toLocaleString()}</span>${locked ? '<span class="level-lock">🔒</span>' : ""}`;
+                button.addEventListener("click", () => { currentMode = "levels"; startGame(level); });
+                levelsElement.appendChild(button);
+            });
+        }
+
+        function createBladeShop() {
+            bladesElement.innerHTML = "";
+            BLADES.forEach((blade, index) => {
+                const owned = save.ownedBlades[index]; const selected = save.selectedBlade === index;
+                const level = save.bladeLevels[index]; const multiplier = blade.baseBonus + (level - 1) * 0.12;
+                const upgradePrice = 120 * level * (index + 1);
+                const card = document.createElement("div"); card.className = `blade-card${selected ? " selected" : ""}`;
+                let buttonText, disabled = false, action;
+                if (!owned) { buttonText = `Buy — 🪙 ${blade.price}`; disabled = save.coins < blade.price; action = () => buyBlade(index); }
+                else if (!selected) { buttonText = "Select Blade"; action = () => selectBlade(index); }
+                else if (level < 3) { buttonText = `Upgrade — 🪙 ${upgradePrice}`; disabled = save.coins < upgradePrice; action = () => upgradeBlade(index); }
+                else { buttonText = "Max Level"; disabled = true; }
+                card.innerHTML = `<span class="blade-icon">${blade.emoji}</span><span class="blade-name">${blade.name}</span><span class="blade-level">Level ${level}/3</span><span class="blade-power">Bonus: x${multiplier.toFixed(2)}</span>`;
+                const button = document.createElement("button"); button.type = "button"; button.className = "shop-button"; button.textContent = buttonText; button.disabled = disabled; button.addEventListener("click", action);
+                card.appendChild(button); bladesElement.appendChild(card);
+            });
+            updateWallet();
+        }
+
+        function buyBlade(index) { const blade = BLADES[index]; if (save.ownedBlades[index] || save.coins < blade.price) return; save.coins -= blade.price; save.ownedBlades[index] = true; save.selectedBlade = index; saveGame(); createBladeShop(); playBuySound(); }
+        function selectBlade(index) { if (!save.ownedBlades[index]) return; save.selectedBlade = index; saveGame(); createBladeShop(); }
+        function upgradeBlade(index) { const level = save.bladeLevels[index]; if (level >= 3) return; const price = 120 * level * (index + 1); if (save.coins < price) return; save.coins -= price; save.bladeLevels[index]++; saveGame(); createBladeShop(); playVictorySound(); }
+        function updateWallet() { menuCoins.textContent = save.coins.toLocaleString(); shopCoins.textContent = save.coins.toLocaleString(); }
+
+        function selectMode(mode) { currentMode = mode; document.querySelectorAll(".mode-button").forEach(b => b.classList.toggle("active", b.dataset.mode === mode)); levelSection.style.display = mode === "levels" ? "block" : "none"; if (mode === "arcade" || mode === "zen") startGame(1); }
+
+        function getCurrentTheme() {
+            if (currentMode === "levels") return LEVELS[currentLevel - 1];
+            if (currentMode === "arcade") return { icon:"⚡", name:"Nutrition Rush", objective:"Slice every healthy food", tip:"Variety helps your body receive many nutrients.", sky:"#ff8d46", middle:"#b53f69", ground:"#4b255b", glow:"#ffd45d", left:"🍎", right:"🥦", foods:FOOD.map(item => item.emoji) };
+            return { icon:"🧘", name:"Mindful Nutrition", objective:"Relax and make healthy choices", tip:"Mindful eating means slowing down and enjoying food.", sky:"#67d9c1", middle:"#398b89", ground:"#214e58", glow:"#9bfff1", left:"🥗", right:"🍵", foods:FOOD.map(item => item.emoji) };
+        }
+
+        function applyLevelTheme(showAnnouncement = true) {
+            const theme = getCurrentTheme(); themeIcon.textContent = theme.icon; themeName.textContent = theme.name; themeTip.textContent = theme.tip;
+            game.style.setProperty("--theme-glow", theme.glow); game.style.setProperty("--left-decoration", `"${theme.left}"`); game.style.setProperty("--right-decoration", `"${theme.right}"`);
+            game.style.borderColor = theme.glow;
+            game.style.boxShadow = `0 25px 70px rgba(0,0,0,0.4), 0 0 35px ${theme.glow}66, inset 0 0 70px rgba(0,0,0,0.25)`;
+            game.style.background = `radial-gradient(circle at 75% 15%, ${theme.glow}cc 0 4%, transparent 4.7%), linear-gradient(180deg, ${theme.sky} 0%, ${theme.middle} 49%, ${theme.ground} 50%, #102c25 100%)`;
+            if (showAnnouncement) showThemeAnnouncement(theme);
+        }
+
+        function showThemeAnnouncement(theme) {
+            const a = document.createElement("div"); a.className = "theme-announcement";
+            a.innerHTML = `<span>${theme.icon}</span><strong>Level ${currentLevel}: ${theme.name}</strong><small>${theme.objective}<br>💡 ${theme.tip}</small>`;
+            effectLayer.appendChild(a); setTimeout(() => a.remove(), 2400);
+        }
+
+        function startGame(level = 1) {
+            currentLevel = level; score = 0; slices = 0; combo = 1; bestCombo = 1; hearts = MAX_HEARTS; earnedCoins = 0; timeLeft = 60;
+            playing = true; paused = false; pointerActive = false; previousPointer = null;
+            spawnElapsed = 0; timerElapsed = 0; frozenUntil = 0; trailPoints = [];
+            clearEntities(); clearEffects();
+            menuScreen.style.display = "none"; resultScreen.style.display = "none"; gameScreen.style.display = "block";
+            pauseOverlay.style.display = "none"; freezeOverlay.style.display = "none"; pauseButton.textContent = "⏸";
+            const blade = currentBlade(); bladeElement.textContent = blade.emoji; bladeElement.style.display = "none";
+            document.documentElement.style.setProperty("--trail", blade.trail);
+            applyLevelTheme(); resizeCanvas(); updateHUD();
+            lastTime = performance.now(); playLevelStartSound();
+        }
+
+        function getDifficulty() {
+            if (currentMode === "levels") return LEVELS[currentLevel - 1];
+            if (currentMode === "arcade") return { speed:1.3, bombs:0.16, freeze:0.08, spawn:570, maxWave:3 };
+            return { speed:1.15, bombs:0, freeze:0.1, spawn:610, maxWave:3 };
+        }
+
+        function updateHUD() {
+            levelValue.textContent = currentMode === "levels" ? currentLevel : currentMode === "arcade" ? "Arcade" : "Zen";
+            scoreValue.textContent = score.toLocaleString(); comboValue.textContent = `x${combo}`; coinValue.textContent = earnedCoins.toLocaleString();
+            if (currentMode === "levels") {
+                const data = LEVELS[currentLevel - 1];
+                const totalProgress = Math.min(100, Math.min(score / data.goal, slices / data.slices) * 100);
+                objectiveName.textContent = `${data.icon} ${data.objective}: ${slices}/${data.slices}`;
+                objectiveValue.textContent = `${score.toLocaleString()} / ${data.goal.toLocaleString()}`;
+                progressBar.style.width = `${totalProgress}%`;
+            } else {
+                objectiveName.textContent = currentMode === "arcade" ? "⚡ Nutrition Rush" : "🧘 Mindful Timer";
+                objectiveValue.textContent = `${Math.max(0, Math.ceil(timeLeft))}s`;
+                progressBar.style.width = `${Math.max(0, timeLeft / 60 * 100)}%`;
+            }
+            heartsElement.style.display = currentMode === "zen" ? "none" : "block";
+            heartsElement.innerHTML = Array.from({ length: MAX_HEARTS }, (_, i) => `<span class="${i >= hearts ? "empty-heart" : ""}">❤️</span>`).join("");
+        }
+
+        function spawnWave() {
+            if (!playing || paused) return;
+            // Pause spawning NEW items during freeze so player can catch up on slow ones
+            if (performance.now() < frozenUntil) return;
+            const data = getDifficulty(); let amount = 1;
+            if (Math.random() < 0.3 + currentLevel * 0.02) amount++;
+            if (data.maxWave >= 3 && Math.random() < 0.3) amount++;
+            if (data.maxWave >= 4 && Math.random() < 0.22) amount++;
+            amount = Math.min(amount, data.maxWave);
+            for (let i = 0; i < amount; i++) setTimeout(() => { if (playing && !paused && performance.now() >= frozenUntil) spawnEntity(); }, i * 85);
+        }
+
+        function spawnEntity() {
+            const data = getDifficulty(); const width = game.clientWidth; const height = game.clientHeight; const scale = Math.max(0.62, height / 520);
+            const random = Math.random(); const theme = getCurrentTheme();
+            const availableFood = theme.foods.map(e => FOOD_BY_EMOJI[e]).filter(Boolean);
+            let type = "food", item = availableFood[Math.floor(Math.random() * availableFood.length)] || FOOD[Math.floor(Math.random() * FOOD.length)];
+            if (currentMode !== "zen" && random < data.bombs) { type = "bomb"; item = { emoji:"💣", color:"#ff432f" }; }
+            else if (random < data.bombs + data.freeze) { type = "ice"; item = { emoji:"❄️", color:"#66e7ff" }; }
+            else if (random > 0.97) { type = "coin"; item = { emoji:"🪙", color:"#ffd93d" }; }
+            const element = document.createElement("div"); element.className = `entity ${type}`; element.textContent = item.emoji; entityLayer.appendChild(element);
+            const padding = Math.min(70, width * 0.13); const x = padding + Math.random() * Math.max(20, width - padding * 2); const y = height + 55; const direction = x < width / 2 ? 1 : -1;
+            const entity = { element, type, emoji: item.emoji, color: item.color, x, y,
+                vx: direction * (35 + Math.random() * 95) * data.speed * scale,
+                vy: -(620 + Math.random() * 155) * data.speed * scale,
+                rotation: Math.random() * 360, rotationSpeed: (Math.random() - 0.5) * 350,
+                radius: Math.max(24, element.offsetWidth * 0.4 || 35), destroyed: false
+            };
+            entities.push(entity); renderEntity(entity);
+        }
+
+        function updateEntities(deltaTime, now) {
+            const isFrozen = now < frozenUntil;
+            const effectiveDelta = isFrozen ? deltaTime * FREEZE_SPEED_FACTOR : deltaTime;
+
+            freezeOverlay.style.display = isFrozen ? "flex" : "none";
+
+            entities.forEach(entity => {
+                if (entity.type === "food" && !entity.destroyed) {
+                    if (isFrozen) entity.element.classList.add("frozen-food");
+                    else entity.element.classList.remove("frozen-food");
+                }
+            });
+
+            const data = getDifficulty(); const height = game.clientHeight; const scale = Math.max(0.62, height / 520);
+            const gravity = 670 * data.speed * scale;
+
+            for (const entity of entities) {
+                if (entity.destroyed) continue;
+                entity.vy += gravity * effectiveDelta; entity.x += entity.vx * effectiveDelta; entity.y += entity.vy * effectiveDelta;
+                entity.rotation += entity.rotationSpeed * effectiveDelta;
+                renderEntity(entity);
+                if (entity.y > height + 100 && entity.vy > 0) {
+                    entity.destroyed = true; entity.element.remove();
+                    if (entity.type === "food") { combo = 1; updateHUD(); }
+                }
+            }
+            entities = entities.filter(e => !e.destroyed);
+        }
+
+        function renderEntity(entity) { entity.element.style.transform = `translate(${entity.x}px, ${entity.y}px) translate(-50%, -50%) rotate(${entity.rotation}deg)`; }
+
+        function handlePointer(event) {
+            if (!playing || paused) return;
+            if (event.pointerType === "mouse") pointerActive = true;
+            if (!pointerActive) return; event.preventDefault();
+            const rect = game.getBoundingClientRect(); const x = event.clientX - rect.left; const y = event.clientY - rect.top;
+            if (x < 0 || y < 0 || x > rect.width || y > rect.height) { previousPointer = null; return; }
+            bladeElement.style.display = "block"; bladeElement.style.left = `${x}px`; bladeElement.style.top = `${y}px`;
+            trailPoints.push({ x, y, time: performance.now() });
+            if (!previousPointer) { previousPointer = { x, y }; return; }
+
+            // Create Slash Mark Visual
+            const dist = Math.hypot(x - previousPointer.x, y - previousPointer.y);
+            if (dist > 5) {
+                const mark = document.createElement("div"); mark.className = "slash-mark";
+                const angle = Math.atan2(y - previousPointer.y, x - previousPointer.x);
+                mark.style.left = `${previousPointer.x}px`; mark.style.top = `${previousPointer.y}px`;
+                mark.style.width = `${dist}px`; mark.style.transform = `rotate(${angle}rad)`;
+                slashLayer.appendChild(mark); setTimeout(() => mark.remove(), 300);
+            }
+
+            for (const entity of [...entities]) {
+                if (entity.destroyed) continue;
+                const distance = distanceToLine(entity.x, entity.y, previousPointer.x, previousPointer.y, x, y);
+                if (distance <= entity.radius + 12) sliceEntity(entity);
+            }
+            previousPointer = { x, y };
+        }
+
+        function distanceToLine(px, py, x1, y1, x2, y2) {
+            const dx = x2 - x1; const dy = y2 - y1; const len = dx * dx + dy * dy;
+            if (!len) return Math.hypot(px - x1, py - y1);
+            let amt = ((px - x1) * dx + (py - y1) * dy) / len; amt = Math.max(0, Math.min(1, amt));
+            return Math.hypot(px - (x1 + amt * dx), py - (y1 + amt * dy));
+        }
+
+        function sliceEntity(entity) {
+            if (entity.destroyed || !playing || paused) return;
+            entity.destroyed = true; entity.element.remove();
+            if (entity.type === "bomb") {
+                hearts--; combo = 1; createExplosion(entity.x, entity.y); createPopup(entity.x, entity.y, "Bomb! -1 ❤️", "danger");
+                shakeGame(); playBombSound(); if (hearts <= 0) finishGame(false); else updateHUD(); return;
+            }
+            if (entity.type === "ice") {
+                frozenUntil = performance.now() + FREEZE_TIME;
+                createParticles(entity.x, entity.y, "#69e6ff", 20); createPopup(entity.x, entity.y, "❄️ SLOW-MO 3s!", "freeze");
+                playFreezeSound(); updateHUD(); return;
+            }
+            if (entity.type === "coin") {
+                earnedCoins += 10; createParticles(entity.x, entity.y, "#ffd83d", 14); createPopup(entity.x, entity.y, "+10 🪙", "coin");
+                playCoinSound(); updateHUD(); return;
+            }
+            const points = Math.round(10 * combo * bladeMultiplier());
+            score += points; slices++; earnedCoins++;
+            bestCombo = Math.max(bestCombo, combo); combo = Math.min(12, combo + 1);
+            createSliceEffect(entity); createParticles(entity.x, entity.y, entity.color, 12); createPopup(entity.x, entity.y, `+${points} 🪙+1`);
+            playSliceSound(); updateHUD();
+            if (currentMode === "levels") { const obj = LEVELS[currentLevel - 1]; if (score >= obj.goal && slices >= obj.slices) finishGame(true); }
+        }
+
+        function createSliceEffect(entity) {
+            for (let i = 0; i < 2; i++) {
+                const copy = document.createElement("div"); copy.className = "slice-copy"; copy.textContent = entity.emoji;
+                copy.style.left = `${entity.x}px`; copy.style.top = `${entity.y}px`;
+                copy.style.setProperty("--x", i === 0 ? "-58px" : "58px"); copy.style.setProperty("--r", i === 0 ? "-165deg" : "165deg");
+                effectLayer.appendChild(copy); setTimeout(() => copy.remove(), 650);
+            }
+        }
+
+        function createParticles(x, y, color, amount) {
+            for (let i = 0; i < amount; i++) {
+                const p = document.createElement("div"); const angle = Math.random() * Math.PI * 2; const distance = 30 + Math.random() * 90;
+                p.className = "particle"; p.style.left = `${x}px`; p.style.top = `${y}px`;
+                p.style.setProperty("--color", color); p.style.setProperty("--x", `${Math.cos(angle) * distance}px`); p.style.setProperty("--y", `${Math.sin(angle) * distance}px`);
+                effectLayer.appendChild(p); setTimeout(() => p.remove(), 700);
+            }
+        }
+
+        function createExplosion(x, y) { createParticles(x, y, "#ff3b25", 16); createParticles(x, y, "#ffd53d", 16);
+            const e = document.createElement("div"); e.className = "slice-copy"; e.textContent = "💥"; e.style.left = `${x}px`; e.style.top = `${y}px`; e.style.setProperty("--x", "0px"); e.style.setProperty("--r", "45deg");
+            effectLayer.appendChild(e); setTimeout(() => e.remove(), 650);
+        }
+
+        function createPopup(x, y, text, type = "") { const p = document.createElement("div"); p.className = `popup ${type}`; p.textContent = text; p.style.left = `${x}px`; p.style.top = `${y}px`; effectLayer.appendChild(p); setTimeout(() => p.remove(), 850); }
+        function shakeGame() { game.classList.remove("shake"); void game.offsetWidth; game.classList.add("shake"); setTimeout(() => game.classList.remove("shake"), 360); }
+
+        function drawTrail(now) {
+            const duration = 150; trailPoints = trailPoints.filter(point => now - point.time < duration);
+            context.clearRect(0, 0, game.clientWidth, game.clientHeight);
+            if (trailPoints.length < 2) return;
+            const blade = currentBlade(); context.lineCap = "round"; context.lineJoin = "round";
+            for (let i = 1; i < trailPoints.length; i++) {
+                const prev = trailPoints[i - 1]; const curr = trailPoints[i]; const opacity = Math.max(0, 1 - (now - curr.time) / duration);
+                context.beginPath(); context.moveTo(prev.x, prev.y); context.lineTo(curr.x, curr.y);
+                context.strokeStyle = `rgba(255,255,255,${opacity})`; context.lineWidth = 4 + opacity * 8;
+                context.shadowBlur = 19; context.shadowColor = blade.trail; context.stroke();
+            }
+            context.shadowBlur = 0;
+        }
+
+        function resizeCanvas() {
+            const w = game.clientWidth; const h = game.clientHeight; const ratio = Math.min(window.devicePixelRatio || 1, 2);
+            const tw = Math.floor(w * ratio); const th = Math.floor(h * ratio);
+            if (trailCanvas.width !== tw || trailCanvas.height !== th) { trailCanvas.width = tw; trailCanvas.height = th; trailCanvas.style.width = `${w}px`; trailCanvas.style.height = `${h}px`; context.setTransform(ratio, 0, 0, ratio, 0, 0); }
+        }
+
+        function finishGame(success) {
+            if (!playing) return; playing = false; paused = false; pointerActive = false; previousPointer = null;
+            bladeElement.style.display = "none"; freezeOverlay.style.display = "none"; pauseOverlay.style.display = "none"; clearEntities();
+            save.coins += earnedCoins;
+            if (currentMode === "levels") { const i = currentLevel - 1; save.highScores[i] = Math.max(save.highScores[i], score);
+                if (success) { save.coins += 30 + currentLevel * 5; if (currentLevel < TOTAL_LEVELS) save.unlocked = Math.max(save.unlocked, currentLevel + 1); }
+            } else if (currentMode === "arcade") save.arcadeBest = Math.max(save.arcadeBest, score); else save.zenBest = Math.max(save.zenBest, score);
+            saveGame(); gameScreen.style.display = "none"; resultScreen.style.display = "block";
+            if (currentMode !== "levels") { resultIcon.textContent = "⏱️"; resultTitle.textContent = currentMode === "arcade" ? "Arcade Finished!" : "Zen Finished!"; resultMessage.textContent = "Time is up! Score and coins saved."; nextButton.style.display = "none"; playVictorySound(); }
+            else if (success) {
+                const finalLevel = currentLevel === TOTAL_LEVELS; const ct = LEVELS[currentLevel - 1];
+                resultIcon.textContent = finalLevel ? "👑" : "🏆"; resultTitle.textContent = finalLevel ? "Ultimate Nutrition Champion!" : "Level Complete!";
+                resultMessage.innerHTML = finalLevel ? `You completed all 15 Nutrition Themes!<br><strong>Tip:</strong> Balance, variety, moderation build healthy habits.` : `You completed <strong>${ct.icon} ${ct.name}</strong>!<br>💡 ${ct.tip}<br>Level ${currentLevel + 1} unlocked!`;
+                nextButton.style.display = finalLevel ? "none" : "inline-block"; playVictorySound();
+            } else { resultIcon.textContent = "💥"; resultTitle.textContent = "Game Over"; resultMessage.textContent = "Out of hearts. Missed fruit is safe, but avoid bombs!"; nextButton.style.display = "none"; playGameOverSound(); }
+            resultScore.innerHTML = `Score: ${score.toLocaleString()}<br>Food sliced: ${slices}<br>Best combo: x${bestCombo}<br>Coins earned: 🪙 ${earnedCoins.toLocaleString()}`;
+            createLevels(); createBladeShop();
+        }
+
+        function togglePause() { if (!playing) return; paused = !paused; previousPointer = null; pauseOverlay.style.display = paused ? "grid" : "none"; pauseButton.textContent = paused ? "▶" : "⏸"; if (paused) bladeElement.style.display = "none"; lastTime = performance.now(); }
+        function returnToMenu() { playing = false; paused = false; pointerActive = false; previousPointer = null; clearEntities(); clearEffects(); gameScreen.style.display = "none"; resultScreen.style.display = "none"; menuScreen.style.display = "block"; pauseOverlay.style.display = "none"; freezeOverlay.style.display = "none"; bladeElement.style.display = "none"; createLevels(); createBladeShop(); updateWallet(); }
+        function clearEntities() { entities.forEach(e => e.element.remove()); entities = []; entityLayer.innerHTML = ""; }
+        function clearEffects() { effectLayer.innerHTML = ""; slashLayer.innerHTML = ""; trailPoints = []; context.clearRect(0, 0, game.clientWidth, game.clientHeight); }
+
+        function gameLoop(now) {
+            const rawDelta = (now - lastTime) / 1000; const deltaTime = Math.min(rawDelta, 0.033); lastTime = now;
+            resizeCanvas(); drawTrail(now);
+            if (playing && !paused) {
+                const isFrozen = now < frozenUntil;
+                // Slow down timer during freeze
+                if (currentMode !== "levels") { timerElapsed += isFrozen ? deltaTime * FREEZE_SPEED_FACTOR : deltaTime; if (timerElapsed >= 0.1) { timeLeft -= timerElapsed; timerElapsed = 0; updateHUD(); if (timeLeft <= 0) finishGame(true); } }
+                // Pause spawn accumulation during freeze
+                if (!isFrozen) spawnElapsed += deltaTime * 1000;
+                const spawnTime = getDifficulty().spawn; if (spawnElapsed >= spawnTime) { spawnElapsed = 0; spawnWave(); }
+                updateEntities(deltaTime, now);
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        // --- AUDIO ENGINE ---
+        function initAudio() { if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)(); if (audioContext.state === 'suspended') audioContext.resume(); }
+        function playNoise(duration, volume=0.05) {
+            if (muted) return; initAudio();
+            const bufferSize = audioContext.sampleRate * duration; const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+            const data = buffer.getChannelData(0); for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            const source = audioContext.createBufferSource(); source.buffer = buffer;
+            const gain = audioContext.createGain(); gain.gain.setValueAtTime(volume, audioContext.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+            source.connect(gain); gain.connect(audioContext.destination); source.start(); source.stop(audioContext.currentTime + duration);
+        }
+        function playTone(freq, dur, type='sine', vol=0.04) {
+            if (muted) return; initAudio();
+            const osc = audioContext.createOscillator(); const gain = audioContext.createGain(); const now = audioContext.currentTime;
+            osc.type = type; osc.frequency.setValueAtTime(freq, now); gain.gain.setValueAtTime(vol, now); gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+            osc.connect(gain); gain.connect(audioContext.destination); osc.start(now); osc.stop(now + dur);
+        }
+        function playSliceSound() { playNoise(0.04, 0.08); playTone(800, 0.05, 'sine', 0.04); }
+        function playBombSound() { playNoise(0.3, 0.15); playTone(60, 0.4, 'sawtooth', 0.12); }
+        function playFreezeSound() { playTone(1200, 0.2, 'sine', 0.08); playTone(800, 0.15, 'triangle', 0.06); playNoise(0.1, 0.05); }
+        function playCoinSound() { playTone(1200, 0.08, 'sine', 0.06); setTimeout(() => playTone(1800, 0.08, 'sine', 0.06), 50); }
+        function playBuySound() { playTone(600, 0.1, 'sine', 0.05); playTone(900, 0.15, 'sine', 0.05); }
+        function playLevelStartSound() { playTone(400, 0.1, 'sine', 0.05); setTimeout(() => playTone(600, 0.1, 'sine', 0.05), 100); setTimeout(() => playTone(800, 0.15, 'sine', 0.05), 200); }
+        function playVictorySound() { [420, 540, 670, 850].forEach((f, i) => setTimeout(() => { playTone(f, 0.2, 'sine', 0.06); playNoise(0.05, 0.02); }, i * 120)); }
+        function playGameOverSound() { [400, 300, 200, 100].forEach((f, i) => setTimeout(() => playTone(f, 0.2, 'sawtooth', 0.06), i * 150)); }
+
+        // --- EVENT LISTENERS ---
+        game.addEventListener("pointerdown", event => { pointerActive = true; previousPointer = null; try { game.setPointerCapture(event.pointerId); } catch {} handlePointer(event); });
+        game.addEventListener("pointermove", handlePointer);
+        game.addEventListener("pointerup", event => { if (event.pointerType !== "mouse") { pointerActive = false; bladeElement.style.display = "none"; } previousPointer = null; });
+        game.addEventListener("pointercancel", () => { pointerActive = false; previousPointer = null; bladeElement.style.display = "none"; });
+        game.addEventListener("pointerleave", event => { if (event.pointerType === "mouse") { pointerActive = false; previousPointer = null; bladeElement.style.display = "none"; } });
+        document.querySelectorAll(".mode-button").forEach(b => b.addEventListener("click", () => selectMode(b.dataset.mode)));
+        soundButton.addEventListener("click", () => { muted = !muted; soundButton.textContent = muted ? "🔇" : "🔊"; });
+        pauseButton.addEventListener("click", togglePause); exitButton.addEventListener("click", returnToMenu); menuButton.addEventListener("click", returnToMenu);
+        replayButton.addEventListener("click", () => startGame(currentLevel)); nextButton.addEventListener("click", () => startGame(Math.min(TOTAL_LEVELS, currentLevel + 1)));
+        window.addEventListener("resize", resizeCanvas);
+        document.addEventListener("keydown", event => { if (event.key === "Escape" && playing) togglePause(); });
+        document.addEventListener("visibilitychange", () => { if (document.hidden && playing && !paused) togglePause(); });
+
+        createLevels(); createBladeShop(); updateWallet(); requestAnimationFrame(gameLoop);
+    </script>
 </body>
 </html>
+```
