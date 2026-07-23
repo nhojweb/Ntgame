@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>Nutrition Month Fruit Ninja</title>
+    <title>John Vegetables,Fruit Ninja</title>
     <style>
         :root {
             --panel: rgba(7, 19, 35, 0.92);
@@ -19,8 +19,13 @@
         }
 
         * { box-sizing: border-box; margin: 0; }
-
         html, body { min-height: 100%; }
+
+        /* Lock class to prevent scrolling on mobile during gameplay */
+        html.lock-scroll, html.lock-scroll body {
+            overflow: hidden !important;
+            height: 100% !important;
+        }
 
         body {
             min-height: 100vh;
@@ -57,7 +62,6 @@
         }
 
         .header { margin-bottom: 22px; text-align: center; }
-
         .logo {
             display: flex;
             align-items: center;
@@ -219,6 +223,7 @@
             font-size: clamp(8rem, 22vw, 18rem); opacity: 0.5; filter: brightness(0.65); transform: scaleX(-1); pointer-events: none;
         }
 
+        /* Nutrition Banner */
         #nutritionBanner {
             position: absolute; top: 15px; left: 50%; z-index: 8; display: flex; align-items: center; gap: 11px;
             width: min(440px, calc(100% - 30px)); padding: 10px 16px;
@@ -248,9 +253,7 @@
         .entity.bomb { filter: drop-shadow(0 0 13px rgba(255,65,35,0.6)) drop-shadow(0 8px 7px rgba(0,0,0,0.7)); }
         .entity.ice { filter: drop-shadow(0 0 15px #5ce5ff) drop-shadow(0 8px 7px rgba(0,0,0,0.55)); }
         .entity.coin { filter: drop-shadow(0 0 15px #ffd83d) drop-shadow(0 8px 7px rgba(0,0,0,0.55)); }
-        .entity.frozen-food {
-            filter: saturate(0.6) brightness(1.3) drop-shadow(0 0 22px #75e9ff) drop-shadow(0 8px 7px rgba(0,0,0,0.5)) !important;
-        }
+        .entity.frozen-food { filter: saturate(0.6) brightness(1.3) drop-shadow(0 0 22px #75e9ff) drop-shadow(0 8px 7px rgba(0,0,0,0.5)) !important; }
 
         #blade {
             position: absolute; z-index: 9; display: none; pointer-events: none;
@@ -262,7 +265,7 @@
             position: absolute; inset: 0; z-index: 7; display: none;
             align-items: center; justify-content: center; pointer-events: none;
             border: 6px solid rgba(104,226,255,0.6); border-radius: inherit;
-            background: rgba(100,220,255,0.08); /* Very transparent so you can still slice */
+            background: rgba(100,220,255,0.08);
             box-shadow: inset 0 0 80px rgba(92,224,255,0.35);
         }
         #freezeOverlay strong { color: white; font-size: clamp(2rem, 8vw, 5rem); text-shadow: 0 0 15px #39d9ff, 0 5px rgba(0,0,0,0.3); }
@@ -480,16 +483,23 @@
         const FREEZE_TIME = 3000;
         const FREEZE_SPEED_FACTOR = 0.15; // Slows to 15% speed
 
+        // --- FIXED STEP ENGINE FOR PERFECT FPS ---
+        const FIXED_STEP = 1 / 60; // Physics runs at 60 ticks per second
+        const MAX_FRAME_TIME = 1.0; // Allows game to catch up smoothly even if browser throttles to 1 FPS
+        let accumulator = 0;
+        let spawnCounter = 0;
+        let pendingHudUpdate = false;
+
         const NUTRITION_THEMES = [
             { icon:"🌈", name:"Eat the Rainbow", objective:"Slice colorful food", tip:"Different food colors provide different nutrients.", foods:["🍎","🍊","🍌","🥦","🫐","🍇","茄子"], sky:"#5ec9ff", middle:"#5acb9a", ground:"#2d7547", glow:"#f7dd55", left:"🍎", right:"🥦" },
             { icon:"🍓", name:"Fruit Power", objective:"Build a healthy fruit basket", tip:"Fruit provides vitamins, minerals and fiber.", foods:["🍎","🍌","🍊","🍉","🍓","菠萝","🥝"], sky:"#ff9bba", middle:"#ffb65d", ground:"#6c9c46", glow:"#ffdf57", left:"🍓", right:"🍍" },
             { icon:"🥦", name:"Vegetable Garden", objective:"Slice fresh vegetables", tip:"Vegetables help support growth and immunity.", foods:["🥕","🥒","🥦","玉米","番茄","茄子","🥬"], sky:"#77d98b", middle:"#3cab69", ground:"#174f31", glow:"#80ff8d", left:"🥕", right:"🥦" },
-            { icon:"💧", name:"Hydration Station", objective:"Choose water-rich food", tip:"Drink water regularly, especially during activity.", foods:["西瓜","🥒","橙子","草莓","🍈","菠萝","桃子"], sky:"#56d8ff", middle:"#258fc8", ground:"#125b83", glow:"#62edff", left:"💧", right:"🍉" },
+            { icon:"💧", name:"Hydration Station", objective:"Choose water-rich food", tip:"Drink water regularly, especially during activity.", foods:["西瓜","🥒","橙子","草莓","🍈","菠萝","桃子"], sky:"#56d8ff", middle:"#258fc8", ground:"#125b83", glow:"#62edff", left:"💧", right:"西瓜" },
             { icon:"🌅", name:"Breakfast Boost", objective:"Build an energizing breakfast", tip:"A balanced breakfast helps fuel your morning.", foods:["香蕉","苹果","鸡蛋","牛奶","面包","麦片","草莓"], sky:"#ffbb57", middle:"#ef7f4b", ground:"#77523a", glow:"#ffe07a", left:"🥣", right:"🍌" },
             { icon:"🌾", name:"Whole Grain Energy", objective:"Collect energy-giving foods", tip:"Whole grains provide lasting energy and fiber.", foods:["面包","玉米","米饭","麦片","红薯","土豆","香蕉"], sky:"#eac56b", middle:"#bb8945", ground:"#614425", glow:"#ffe095", left:"🌾", right:"面包" },
             { icon:"💪", name:"Protein Power", objective:"Slice protein-rich foods", tip:"Protein supports muscles, growth and body repair.", foods:["鸡蛋","鱼","鸡肉","花生","豆子","豌豆","牛奶"], sky:"#bf88ed", middle:"#7550ad", ground:"#38295d", glow:"#dda4ff", left:"🥚", right:"🐟" },
             { icon:"🦴", name:"Strong Bones", objective:"Collect calcium-rich foods", tip:"Calcium and vitamin D help build strong bones.", foods:["牛奶","奶酪","西兰花","绿叶菜","鱼","豆子","鸡蛋"], sky:"#a6e8ff", middle:"#6ca9d3", ground:"#315d85", glow:"#e0fbff", left:"🥛", right:"🧀" },
-            { icon:"🍊", name:"Vitamin C Shield", objective:"Strengthen your vitamin shield", tip:"Vitamin C supports immunity and healthy skin.", foods:["橙子","草莓","猕猴桃","菠萝","柠檬","番茄","辣椒"], sky:"#ffbd63", middle:"#f47635", ground:"#984029", glow:"#fff06c", left:"🍊", right:"🥝" },
+            { icon:"🍊", name:"Vitamin C Shield", objective:"Strengthen your vitamin shield", tip:"Vitamin C supports immunity and healthy skin.", foods:["橙子","草莓","猕猴桃","菠萝","柠檬","番茄","辣椒"], sky:"#ffbd63", middle:"#f47635", ground:"#984029", glow:"#fff06c", left:"橙子", right:"🥝" },
             { icon:"🩸", name:"Iron Strength", objective:"Collect iron-supporting foods", tip:"Iron helps transport oxygen around your body.", foods:["🥬","🥦","豆子","豌豆","🥚","鱼","鸡肉"], sky:"#e25b65", middle:"#9f3347", ground:"#501e31", glow:"#ff7e88", left:"🥬", right:"🫘" },
             { icon:"🌿", name:"Fiber Forest", objective:"Find high-fiber foods", tip:"Fiber supports healthy digestion and fullness.", foods:["苹果","梨","西兰花","胡萝卜","豆子","玉米","面包"], sky:"#75c978", middle:"#3c8955", ground:"#19462f", glow:"#a1ff93", left:"梨", right:"豆子" },
             { icon:"🍬", name:"Smart Sugar Choices", objective:"Choose naturally sweet foods", tip:"Choose whole fruit more often than sugary snacks.", foods:["苹果","香蕉","草莓","葡萄","桃子","芒果","西瓜"], sky:"#f28bc0", middle:"#ae579f", ground:"#583667", glow:"#ffb3df", left:"草莓", right:"葡萄" },
@@ -499,43 +509,25 @@
         ];
 
         const fixFoods = foods => foods.map(f => {
-            const map = { "茄子":"🍆", "菠萝":"🍍", "面包":"🍞", "玉米":"🌽", "米饭":"🍚", "麦片":"🥣", "红薯":"🍠", "土豆":"🥔", "香蕉":"🍌", "鸡肉":"🍗", "花生":"🥜", "豆子":"🫘", "豌豆":"🫛", "牛奶":"🥛", "奶酪":"🧀", "西兰花":"🥦", "绿叶菜":"🥬", "鱼":"🐟", "鸡蛋":"🥚", "橙子":"🍊", "草莓":"🍓", "猕猴桃":"🥝", "柠檬":"🍋", "番茄":"🍅", "辣椒":"🫑", "苹果":"🍎", "梨":"🍐", "胡萝卜":"🥕", "葡萄":"🍇", "桃子":"🍑", "芒果":"🥭", "西瓜":"🍉", "蓝莓":"🫐", "沙拉":"🥗" };
+            const map = { "茄子":"🍆", "菠萝":"🍍", "面包":"面包", "玉米":"玉米", "米饭":"米饭", "麦片":"🥣", "红薯":"🍠", "土豆":"🥔", "香蕉":"🍌", "鸡肉":"🍗", "花生":"🥜", "豆子":"🫘", "豌豆":"🫛", "牛奶":"🥛", "奶酪":"🧀", "西兰花":"🥦", "绿叶菜":"🥬", "鱼":"🐟", "鸡蛋":"🥚", "橙子":"🍊", "草莓":"🍓", "猕猴桃":"🥝", "柠檬":"🍋", "番茄":"🍅", "辣椒":"🫑", "苹果":"🍎", "梨":"🍐", "胡萝卜":"🥕", "葡萄":"🍇", "桃子":"🍑", "芒果":"🥭", "西瓜":"西瓜", "蓝莓":"🫐", "沙拉":"🥗" };
             return map[f] || f;
         });
 
         const LEVELS = NUTRITION_THEMES.map((theme, index) => {
             const level = index + 1;
-            return {
-                ...theme, foods: fixFoods(theme.foods),
-                goal: 200 + index * 180 + index * index * 22,
-                slices: 8 + index * 3,
-                speed: 0.88 + index * 0.055,
-                bombs: 0.06 + index * 0.012,
-                freeze: Math.max(0.035, 0.09 - index * 0.003),
-                spawn: Math.max(360, 920 - index * 39),
-                maxWave: Math.min(4, 1 + Math.floor(index / 4)),
-                difficulty: level <= 3 ? "Easy" : level <= 6 ? "Normal" : level <= 9 ? "Medium" : level <= 12 ? "Hard" : level <= 14 ? "Expert" : "Ninja",
-                difficultyColor: level <= 3 ? "#43a047" : level <= 6 ? "#00a9c7" : level <= 9 ? "#7958d5" : level <= 12 ? "#ee5a2c" : level <= 14 ? "#dc2646" : "#7c1741"
-            };
+            return { ...theme, foods: fixFoods(theme.foods), goal: 200 + index * 180 + index * index * 22, slices: 8 + index * 3, speed: 0.88 + index * 0.055, bombs: 0.06 + index * 0.012, freeze: Math.max(0.035, 0.09 - index * 0.003), spawn: Math.max(360, 920 - index * 39), maxWave: Math.min(4, 1 + Math.floor(index / 4)), difficulty: level <= 3 ? "Easy" : level <= 6 ? "Normal" : level <= 9 ? "Medium" : level <= 12 ? "Hard" : level <= 14 ? "Expert" : "Ninja", difficultyColor: level <= 3 ? "#43a047" : level <= 6 ? "#00a9c7" : level <= 9 ? "#7958d5" : level <= 12 ? "#ee5a2c" : level <= 14 ? "#dc2646" : "#7c1741" };
         });
 
         const TOTAL_LEVELS = LEVELS.length;
 
         const FOOD = [
-            { emoji:"🍎", color:"#ff3455" }, { emoji:"🍌", color:"#ffe34f" }, { emoji:"🍊", color:"#ff8a20" },
-            { emoji:"🍉", color:"#ff3859" }, { emoji:"🍓", color:"#ff2b55" }, { emoji:"🍍", color:"#ffd330" },
-            { emoji:"🥭", color:"#ff9d2c" }, { emoji:"🥝", color:"#86d74d" }, { emoji:"🍑", color:"#ff8f79" },
-            { emoji:"🍐", color:"#b9dc55" }, { emoji:"🍇", color:"#8c45c7" }, { emoji:"🫐", color:"#5368d8" },
-            { emoji:"🍋", color:"#ffe23c" }, { emoji:"🥥", color:"#f7f0d8" }, { emoji:"🍈", color:"#aee36e" },
-            { emoji:"🥕", color:"#ff7426" }, { emoji:"🥒", color:"#56dc72" }, { emoji:"🥦", color:"#35bd63" },
-            { emoji:"🌽", color:"#ffe44d" }, { emoji:"🍅", color:"#ff3e45" }, { emoji:"🍆", color:"#984dc7" },
-            { emoji:"🫑", color:"#42d56c" }, { emoji:"🥬", color:"#59d967" }, { emoji:"🥔", color:"#c79a64" },
-            { emoji:"🍠", color:"#bd6f55" }, { emoji:"🫘", color:"#b05a45" }, { emoji:"🫛", color:"#69d264" },
-            { emoji:"🧅", color:"#d7b7d9" }, { emoji:"🧄", color:"#f1ead8" }, { emoji:"🍄", color:"#e6d5c7" },
-            { emoji:"🥚", color:"#fff0bd" }, { emoji:"🥛", color:"#f4fbff" }, { emoji:"🧀", color:"#ffd94e" },
-            { emoji:"🐟", color:"#65cbe8" }, { emoji:"🍗", color:"#d99560" }, { emoji:"🥜", color:"#bc7a42" },
-            { emoji:"🍞", color:"#d99f5d" }, { emoji:"🥣", color:"#d9ecff" }, { emoji:"🍚", color:"#fff9e8" },
-            { emoji:"🥗", color:"#54d66a" }
+            { emoji:"🍎", color:"#ff3455" }, { emoji:"🍌", color:"#ffe34f" }, { emoji:"🍊", color:"#ff8a20" }, { emoji:"西瓜", color:"#ff3859" }, { emoji:"🍓", color:"#ff2b55" }, { emoji:"菠萝", color:"#ffd330" },
+            { emoji:"🥭", color:"#ff9d2c" }, { emoji:"🥝", color:"#86d74d" }, { emoji:"🍑", color:"#ff8f79" }, { emoji:"梨", color:"#b9dc55" }, { emoji:"葡萄", color:"#8c45c7" }, { emoji:"蓝莓", color:"#5368d8" },
+            { emoji:"柠檬", color:"#ffe23c" }, { emoji:"🥥", color:"#f7f0d8" }, { emoji:"🍈", color:"#aee36e" }, { emoji:"🥕", color:"#ff7426" }, { emoji:"🥒", color:"#56dc72" }, { emoji:"🥦", color:"#35bd63" },
+            { emoji:"玉米", color:"#ffe44d" }, { emoji:"番茄", color:"#ff3e45" }, { emoji:"茄子", color:"#984dc7" }, { emoji:"辣椒", color:"#42d56c" }, { emoji:"🥬", color:"#59d967" }, { emoji:"🥔", color:"#c79a64" },
+            { emoji:"红薯", color:"#bd6f55" }, { emoji:"豆子", color:"#b05a45" }, { emoji:"豌豆", color:"#69d264" }, { emoji:"🧅", color:"#d7b7d9" }, { emoji:"🧄", color:"#f1ead8" }, { emoji:"🍄", color:"#e6d5c7" },
+            { emoji:"鸡蛋", color:"#fff0bd" }, { emoji:"牛奶", color:"#f4fbff" }, { emoji:"奶酪", color:"#ffd94e" }, { emoji:"鱼", color:"#65cbe8" }, { emoji:"鸡肉", color:"#d99560" }, { emoji:"花生", color:"#bc7a42" },
+            { emoji:"面包", color:"#d99f5d" }, { emoji:"麦片", color:"#d9ecff" }, { emoji:"米饭", color:"#fff9e8" }, { emoji:"沙拉", color:"#54d66a" }
         ];
         const FOOD_BY_EMOJI = Object.fromEntries(FOOD.map(item => [item.emoji, item]));
 
@@ -550,384 +542,218 @@
         ];
 
         const $ = id => document.getElementById(id);
-        const menuScreen = $("menuScreen"); const gameScreen = $("gameScreen"); const resultScreen = $("resultScreen");
-        const levelsElement = $("levels"); const bladesElement = $("blades"); const levelSection = $("levelSection");
-        const menuCoins = $("menuCoins"); const shopCoins = $("shopCoins");
-        const game = $("game"); const entityLayer = $("entityLayer"); const effectLayer = $("effectLayer"); const slashLayer = $("slashLayer");
-        const trailCanvas = $("trailCanvas"); const context = trailCanvas.getContext("2d");
-        const bladeElement = $("blade"); const freezeOverlay = $("freezeOverlay"); const pauseOverlay = $("pauseOverlay");
-        const themeIcon = $("themeIcon"); const themeName = $("themeName"); const themeTip = $("themeTip");
-        const levelValue = $("levelValue"); const scoreValue = $("scoreValue"); const comboValue = $("comboValue"); const coinValue = $("coinValue");
-        const objectiveName = $("objectiveName"); const objectiveValue = $("objectiveValue"); const progressBar = $("progressBar"); const heartsElement = $("hearts");
-        const soundButton = $("soundButton"); const pauseButton = $("pauseButton"); const exitButton = $("exitButton");
-        const resultIcon = $("resultIcon"); const resultTitle = $("resultTitle"); const resultMessage = $("resultMessage"); const resultScore = $("resultScore");
-        const menuButton = $("menuButton"); const replayButton = $("replayButton"); const nextButton = $("nextButton");
+        const menuScreen=$("menuScreen"), gameScreen=$("gameScreen"), resultScreen=$("resultScreen"), levelsElement=$("levels"), bladesElement=$("blades"), levelSection=$("levelSection"), menuCoins=$("menuCoins"), shopCoins=$("shopCoins"), game=$("game"), entityLayer=$("entityLayer"), effectLayer=$("effectLayer"), slashLayer=$("slashLayer"), trailCanvas=$("trailCanvas"), context=trailCanvas.getContext("2d"), bladeElement=$("blade"), freezeOverlay=$("freezeOverlay"), pauseOverlay=$("pauseOverlay"), themeIcon=$("themeIcon"), themeName=$("themeName"), themeTip=$("themeTip"), levelValue=$("levelValue"), scoreValue=$("scoreValue"), comboValue=$("comboValue"), coinValue=$("coinValue"), objectiveName=$("objectiveName"), objectiveValue=$("objectiveValue"), progressBar=$("progressBar"), heartsElement=$("hearts"), soundButton=$("soundButton"), pauseButton=$("pauseButton"), exitButton=$("exitButton"), resultIcon=$("resultIcon"), resultTitle=$("resultTitle"), resultMessage=$("resultMessage"), resultScore=$("resultScore"), menuButton=$("menuButton"), replayButton=$("replayButton"), nextButton=$("nextButton");
 
-        let save = loadSave();
-        let currentMode = "levels"; let currentLevel = 1;
-        let score = 0; let slices = 0; let combo = 1; let bestCombo = 1; let hearts = MAX_HEARTS; let earnedCoins = 0; let timeLeft = 60;
-        let entities = []; let trailPoints = [];
-        let playing = false; let paused = false; let muted = false; let pointerActive = false;
-        let previousPointer = null; let spawnElapsed = 0; let timerElapsed = 0; let frozenUntil = 0; let lastTime = performance.now(); let audioContext = null;
+        let save=loadSave(); let currentMode="levels"; let currentLevel=1;
+        let score=0, slices=0, combo=1, bestCombo=1, hearts=MAX_HEARTS, earnedCoins=0, timeLeft=60;
+        let entities=[], trailPoints=[]; let playing=false, paused=false, muted=false, pointerActive=false;
+        let previousPointer=null, spawnElapsed=0, timerElapsed=0, frozenUntil=0, lastTime=performance.now(), audioContext=null;
 
-        function defaultSave() {
-            return { unlocked:1, coins:0, selectedBlade:0, ownedBlades: Array(BLADES.length).fill(false).map((_,i)=>i===0), bladeLevels: Array(BLADES.length).fill(1), highScores: Array(TOTAL_LEVELS).fill(0), arcadeBest:0, zenBest:0 };
-        }
-        function loadSave() {
-            const defaults = defaultSave();
-            try {
-                const stored = JSON.parse(localStorage.getItem("johnFruitNinjaSave")) || {};
-                return { ...defaults, ...stored, unlocked: Math.min(TOTAL_LEVELS, Math.max(1, Number(stored.unlocked) || 1)),
-                    ownedBlades: BLADES.map((_, i) => i === 0 || Boolean(stored.ownedBlades?.[i])),
-                    bladeLevels: BLADES.map((_, i) => Math.min(3, Math.max(1, Number(stored.bladeLevels?.[i]) || 1))),
-                    highScores: LEVELS.map((_, i) => Number(stored.highScores?.[i]) || 0)
-                };
-            } catch { return defaults; }
-        }
-        function saveGame() { try { localStorage.setItem("johnFruitNinjaSave", JSON.stringify(save)); } catch {} }
+        function defaultSave() { return { unlocked:1, coins:0, selectedBlade:0, ownedBlades: Array(BLADES.length).fill(false).map((_,i)=>i===0), bladeLevels: Array(BLADES.length).fill(1), highScores: Array(TOTAL_LEVELS).fill(0), arcadeBest:0, zenBest:0 }; }
+        function loadSave() { const defaults=defaultSave(); try { const stored=JSON.parse(localStorage.getItem("johnFruitNinjaSave"))||{}; return {...defaults,...stored, unlocked:Math.min(TOTAL_LEVELS,Math.max(1,Number(stored.unlocked)||1)), ownedBlades:BLADES.map((_,i)=>i===0||Boolean(stored.ownedBlades?.[i])), bladeLevels:BLADES.map((_,i)=>Math.min(3,Math.max(1,Number(stored.bladeLevels?.[i])||1))), highScores:LEVELS.map((_,i)=>Number(stored.highScores?.[i])||0) }; } catch { return defaults; } }
+        function saveGame() { try { localStorage.setItem("johnFruitNinjaSave",JSON.stringify(save)); } catch {} }
         function currentBlade() { return BLADES[save.selectedBlade]; }
         function bladeMultiplier() { return currentBlade().baseBonus + (save.bladeLevels[save.selectedBlade] - 1) * 0.12; }
 
-        function createLevels() {
-            levelsElement.innerHTML = "";
-            LEVELS.forEach((data, index) => {
-                const level = index + 1; const locked = level > save.unlocked;
-                const button = document.createElement("button"); button.type = "button"; button.className = "level-button"; button.disabled = locked;
-                button.style.borderColor = locked ? "" : `${data.glow}55`;
-                button.innerHTML = `<span class="level-number">${level}</span><span class="level-theme-icon">${data.icon}</span><span class="level-theme">${data.name}</span><span class="difficulty" style="--difficulty:${data.difficultyColor}">${data.difficulty}</span><span class="level-info">🎯 ${data.goal.toLocaleString()} score</span><span class="level-info">🍎 ${data.slices} slices</span><span class="nutrition-objective">${data.objective}</span><span class="level-info">🏆 ${save.highScores[index].toLocaleString()}</span>${locked ? '<span class="level-lock">🔒</span>' : ""}`;
-                button.addEventListener("click", () => { currentMode = "levels"; startGame(level); });
-                levelsElement.appendChild(button);
-            });
-        }
+        function createLevels() { levelsElement.innerHTML=""; LEVELS.forEach((data,index)=>{ const level=index+1; const locked=level>save.unlocked; const button=document.createElement("button"); button.type="button"; button.className="level-button"; button.disabled=locked; button.style.borderColor=locked?"":`${data.glow}55`; button.innerHTML=`<span class="level-number">${level}</span><span class="level-theme-icon">${data.icon}</span><span class="level-theme">${data.name}</span><span class="difficulty" style="--difficulty:${data.difficultyColor}">${data.difficulty}</span><span class="level-info">🎯 ${data.goal.toLocaleString()} score</span><span class="level-info">🍎 ${data.slices} slices</span><span class="nutrition-objective">${data.objective}</span><span class="level-info">🏆 ${save.highScores[index].toLocaleString()}</span>${locked?'<span class="level-lock">🔒</span>':''}`; button.addEventListener("click",()=>{ currentMode="levels"; startGame(level); }); levelsElement.appendChild(button); }); }
 
-        function createBladeShop() {
-            bladesElement.innerHTML = "";
-            BLADES.forEach((blade, index) => {
-                const owned = save.ownedBlades[index]; const selected = save.selectedBlade === index;
-                const level = save.bladeLevels[index]; const multiplier = blade.baseBonus + (level - 1) * 0.12;
-                const upgradePrice = 120 * level * (index + 1);
-                const card = document.createElement("div"); card.className = `blade-card${selected ? " selected" : ""}`;
-                let buttonText, disabled = false, action;
-                if (!owned) { buttonText = `Buy — 🪙 ${blade.price}`; disabled = save.coins < blade.price; action = () => buyBlade(index); }
-                else if (!selected) { buttonText = "Select Blade"; action = () => selectBlade(index); }
-                else if (level < 3) { buttonText = `Upgrade — 🪙 ${upgradePrice}`; disabled = save.coins < upgradePrice; action = () => upgradeBlade(index); }
-                else { buttonText = "Max Level"; disabled = true; }
-                card.innerHTML = `<span class="blade-icon">${blade.emoji}</span><span class="blade-name">${blade.name}</span><span class="blade-level">Level ${level}/3</span><span class="blade-power">Bonus: x${multiplier.toFixed(2)}</span>`;
-                const button = document.createElement("button"); button.type = "button"; button.className = "shop-button"; button.textContent = buttonText; button.disabled = disabled; button.addEventListener("click", action);
-                card.appendChild(button); bladesElement.appendChild(card);
-            });
-            updateWallet();
-        }
+        function createBladeShop() { bladesElement.innerHTML=""; BLADES.forEach((blade,index)=>{ const owned=save.ownedBlades[index]; const selected=save.selectedBlade===index; const level=save.bladeLevels[index]; const multiplier=blade.baseBonus+(level-1)*0.12; const upgradePrice=120*level*(index+1); const card=document.createElement("div"); card.className=`blade-card${selected?" selected":""}`; let buttonText, disabled=false, action; if(!owned){ buttonText=`Buy — 🪙 ${blade.price}`; disabled=save.coins<blade.price; action=()=>buyBlade(index); } else if(!selected){ buttonText="Select Blade"; action=()=>selectBlade(index); } else if(level<3){ buttonText=`Upgrade — 🪙 ${upgradePrice}`; disabled=save.coins<upgradePrice; action=()=>upgradeBlade(index); } else { buttonText="Max Level"; disabled=true; } card.innerHTML=`<span class="blade-icon">${blade.emoji}</span><span class="blade-name">${blade.name}</span><span class="blade-level">Level ${level}/3</span><span class="blade-power">Bonus: x${multiplier.toFixed(2)}</span>`; const button=document.createElement("button"); button.type="button"; button.className="shop-button"; button.textContent=buttonText; button.disabled=disabled; button.addEventListener("click",action); card.appendChild(button); bladesElement.appendChild(card); }); updateWallet(); }
 
-        function buyBlade(index) { const blade = BLADES[index]; if (save.ownedBlades[index] || save.coins < blade.price) return; save.coins -= blade.price; save.ownedBlades[index] = true; save.selectedBlade = index; saveGame(); createBladeShop(); playBuySound(); }
-        function selectBlade(index) { if (!save.ownedBlades[index]) return; save.selectedBlade = index; saveGame(); createBladeShop(); }
-        function upgradeBlade(index) { const level = save.bladeLevels[index]; if (level >= 3) return; const price = 120 * level * (index + 1); if (save.coins < price) return; save.coins -= price; save.bladeLevels[index]++; saveGame(); createBladeShop(); playVictorySound(); }
-        function updateWallet() { menuCoins.textContent = save.coins.toLocaleString(); shopCoins.textContent = save.coins.toLocaleString(); }
+        function buyBlade(index) { const blade=BLADES[index]; if(save.ownedBlades[index]||save.coins<blade.price) return; save.coins-=blade.price; save.ownedBlades[index]=true; save.selectedBlade=index; saveGame(); createBladeShop(); playBuySound(); }
+        function selectBlade(index) { if(!save.ownedBlades[index]) return; save.selectedBlade=index; saveGame(); createBladeShop(); }
+        function upgradeBlade(index) { const level=save.bladeLevels[index]; if(level>=3) return; const price=120*level*(index+1); if(save.coins<price) return; save.coins-=price; save.bladeLevels[index]++; saveGame(); createBladeShop(); playVictorySound(); }
+        function updateWallet() { menuCoins.textContent=save.coins.toLocaleString(); shopCoins.textContent=save.coins.toLocaleString(); }
 
-        function selectMode(mode) { currentMode = mode; document.querySelectorAll(".mode-button").forEach(b => b.classList.toggle("active", b.dataset.mode === mode)); levelSection.style.display = mode === "levels" ? "block" : "none"; if (mode === "arcade" || mode === "zen") startGame(1); }
+        function selectMode(mode) { currentMode=mode; document.querySelectorAll(".mode-button").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode)); levelSection.style.display=mode==="levels"?"block":"none"; if(mode==="arcade"||mode==="zen") startGame(1); }
 
-        function getCurrentTheme() {
-            if (currentMode === "levels") return LEVELS[currentLevel - 1];
-            if (currentMode === "arcade") return { icon:"⚡", name:"Nutrition Rush", objective:"Slice every healthy food", tip:"Variety helps your body receive many nutrients.", sky:"#ff8d46", middle:"#b53f69", ground:"#4b255b", glow:"#ffd45d", left:"🍎", right:"🥦", foods:FOOD.map(item => item.emoji) };
-            return { icon:"🧘", name:"Mindful Nutrition", objective:"Relax and make healthy choices", tip:"Mindful eating means slowing down and enjoying food.", sky:"#67d9c1", middle:"#398b89", ground:"#214e58", glow:"#9bfff1", left:"🥗", right:"🍵", foods:FOOD.map(item => item.emoji) };
-        }
+        function getCurrentTheme() { if(currentMode==="levels") return LEVELS[currentLevel-1]; if(currentMode==="arcade") return { icon:"⚡", name:"Nutrition Rush", objective:"Slice every healthy food", tip:"Variety helps your body receive many nutrients.", sky:"#ff8d46", middle:"#b53f69", ground:"#4b255b", glow:"#ffd45d", left:"🍎", right:"🥦", foods:FOOD.map(item=>item.emoji) }; return { icon:"🧘", name:"Mindful Nutrition", objective:"Relax and make healthy choices", tip:"Mindful eating means slowing down and enjoying food.", sky:"#67d9c1", middle:"#398b89", ground:"#214e58", glow:"#9bfff1", left:"🥗", right:"🍵", foods:FOOD.map(item=>item.emoji) }; }
 
-        function applyLevelTheme(showAnnouncement = true) {
-            const theme = getCurrentTheme(); themeIcon.textContent = theme.icon; themeName.textContent = theme.name; themeTip.textContent = theme.tip;
-            game.style.setProperty("--theme-glow", theme.glow); game.style.setProperty("--left-decoration", `"${theme.left}"`); game.style.setProperty("--right-decoration", `"${theme.right}"`);
-            game.style.borderColor = theme.glow;
-            game.style.boxShadow = `0 25px 70px rgba(0,0,0,0.4), 0 0 35px ${theme.glow}66, inset 0 0 70px rgba(0,0,0,0.25)`;
-            game.style.background = `radial-gradient(circle at 75% 15%, ${theme.glow}cc 0 4%, transparent 4.7%), linear-gradient(180deg, ${theme.sky} 0%, ${theme.middle} 49%, ${theme.ground} 50%, #102c25 100%)`;
-            if (showAnnouncement) showThemeAnnouncement(theme);
-        }
+        function applyLevelTheme(showAnnouncement=true) { const theme=getCurrentTheme(); themeIcon.textContent=theme.icon; themeName.textContent=theme.name; themeTip.textContent=theme.tip; game.style.setProperty("--theme-glow",theme.glow); game.style.setProperty("--left-decoration",`"${theme.left}"`); game.style.setProperty("--right-decoration",`"${theme.right}"`); game.style.borderColor=theme.glow; game.style.boxShadow=`0 25px 70px rgba(0,0,0,0.4), 0 0 35px ${theme.glow}66, inset 0 0 70px rgba(0,0,0,0.25)`; game.style.background=`radial-gradient(circle at 75% 15%, ${theme.glow}cc 0 4%, transparent 4.7%), linear-gradient(180deg, ${theme.sky} 0%, ${theme.middle} 49%, ${theme.ground} 50%, #102c25 100%)`; if(showAnnouncement) showThemeAnnouncement(theme); }
+        function showThemeAnnouncement(theme) { const a=document.createElement("div"); a.className="theme-announcement"; a.innerHTML=`<span>${theme.icon}</span><strong>Level ${currentLevel}: ${theme.name}</strong><small>${theme.objective}<br>💡 ${theme.tip}</small>`; effectLayer.appendChild(a); setTimeout(()=>a.remove(),2400); }
 
-        function showThemeAnnouncement(theme) {
-            const a = document.createElement("div"); a.className = "theme-announcement";
-            a.innerHTML = `<span>${theme.icon}</span><strong>Level ${currentLevel}: ${theme.name}</strong><small>${theme.objective}<br>💡 ${theme.tip}</small>`;
-            effectLayer.appendChild(a); setTimeout(() => a.remove(), 2400);
-        }
-
-        function startGame(level = 1) {
-            currentLevel = level; score = 0; slices = 0; combo = 1; bestCombo = 1; hearts = MAX_HEARTS; earnedCoins = 0; timeLeft = 60;
-            playing = true; paused = false; pointerActive = false; previousPointer = null;
-            spawnElapsed = 0; timerElapsed = 0; frozenUntil = 0; trailPoints = [];
+        function startGame(level=1) {
+            currentLevel=level; score=0; slices=0; combo=1; bestCombo=1; hearts=MAX_HEARTS; earnedCoins=0; timeLeft=60;
+            playing=true; paused=false; pointerActive=false; previousPointer=null;
+            spawnElapsed=0; timerElapsed=0; frozenUntil=0; trailPoints=[]; accumulator=0; spawnCounter=0; pendingHudUpdate=false;
             clearEntities(); clearEffects();
-            menuScreen.style.display = "none"; resultScreen.style.display = "none"; gameScreen.style.display = "block";
-            pauseOverlay.style.display = "none"; freezeOverlay.style.display = "none"; pauseButton.textContent = "⏸";
-            const blade = currentBlade(); bladeElement.textContent = blade.emoji; bladeElement.style.display = "none";
-            document.documentElement.style.setProperty("--trail", blade.trail);
+            menuScreen.style.display="none"; resultScreen.style.display="none"; gameScreen.style.display="block";
+            pauseOverlay.style.display="none"; freezeOverlay.style.display="none"; pauseButton.textContent="⏸";
+            const blade=currentBlade(); bladeElement.textContent=blade.emoji; bladeElement.style.display="none";
+            document.documentElement.style.setProperty("--trail",blade.trail);
             applyLevelTheme(); resizeCanvas(); updateHUD();
-            lastTime = performance.now(); playLevelStartSound();
+            lastTime=performance.now(); playLevelStartSound();
+            document.documentElement.classList.add('lock-scroll');
         }
 
-        function getDifficulty() {
-            if (currentMode === "levels") return LEVELS[currentLevel - 1];
-            if (currentMode === "arcade") return { speed:1.3, bombs:0.16, freeze:0.08, spawn:570, maxWave:3 };
-            return { speed:1.15, bombs:0, freeze:0.1, spawn:610, maxWave:3 };
-        }
+        function getDifficulty() { if(currentMode==="levels") return LEVELS[currentLevel-1]; if(currentMode==="arcade") return { speed:1.3, bombs:0.16, freeze:0.08, spawn:570, maxWave:3 }; return { speed:1.15, bombs:0, freeze:0.1, spawn:610, maxWave:3 }; }
 
-        function updateHUD() {
-            levelValue.textContent = currentMode === "levels" ? currentLevel : currentMode === "arcade" ? "Arcade" : "Zen";
-            scoreValue.textContent = score.toLocaleString(); comboValue.textContent = `x${combo}`; coinValue.textContent = earnedCoins.toLocaleString();
-            if (currentMode === "levels") {
-                const data = LEVELS[currentLevel - 1];
-                const totalProgress = Math.min(100, Math.min(score / data.goal, slices / data.slices) * 100);
-                objectiveName.textContent = `${data.icon} ${data.objective}: ${slices}/${data.slices}`;
-                objectiveValue.textContent = `${score.toLocaleString()} / ${data.goal.toLocaleString()}`;
-                progressBar.style.width = `${totalProgress}%`;
-            } else {
-                objectiveName.textContent = currentMode === "arcade" ? "⚡ Nutrition Rush" : "🧘 Mindful Timer";
-                objectiveValue.textContent = `${Math.max(0, Math.ceil(timeLeft))}s`;
-                progressBar.style.width = `${Math.max(0, timeLeft / 60 * 100)}%`;
-            }
-            heartsElement.style.display = currentMode === "zen" ? "none" : "block";
-            heartsElement.innerHTML = Array.from({ length: MAX_HEARTS }, (_, i) => `<span class="${i >= hearts ? "empty-heart" : ""}">❤️</span>`).join("");
-        }
+        function updateHUD() { levelValue.textContent=currentMode==="levels"?currentLevel:currentMode==="arcade"?"Arcade":"Zen"; scoreValue.textContent=score.toLocaleString(); comboValue.textContent=`x${combo}`; coinValue.textContent=earnedCoins.toLocaleString(); if(currentMode==="levels"){ const data=LEVELS[currentLevel-1]; const totalProgress=Math.min(100,Math.min(score/data.goal,slices/data.slices)*100); objectiveName.textContent=`${data.icon} ${data.objective}: ${slices}/${data.slices}`; objectiveValue.textContent=`${score.toLocaleString()} / ${data.goal.toLocaleString()}`; progressBar.style.width=`${totalProgress}%`; } else { objectiveName.textContent=currentMode==="arcade"?"⚡ Nutrition Rush":"🧘 Mindful Timer"; objectiveValue.textContent=`${Math.max(0,Math.ceil(timeLeft))}s`; progressBar.style.width=`${Math.max(0,timeLeft/60*100)}%`; } heartsElement.style.display=currentMode==="zen"?"none":"block"; heartsElement.innerHTML=Array.from({length:MAX_HEARTS},(_,i)=>`<span class="${i>=hearts?"empty-heart":""}">❤️</span>`).join(""); }
 
-        function spawnWave() {
-            if (!playing || paused) return;
-            // Pause spawning NEW items during freeze so player can catch up on slow ones
-            if (performance.now() < frozenUntil) return;
-            const data = getDifficulty(); let amount = 1;
-            if (Math.random() < 0.3 + currentLevel * 0.02) amount++;
-            if (data.maxWave >= 3 && Math.random() < 0.3) amount++;
-            if (data.maxWave >= 4 && Math.random() < 0.22) amount++;
-            amount = Math.min(amount, data.maxWave);
-            for (let i = 0; i < amount; i++) setTimeout(() => { if (playing && !paused && performance.now() >= frozenUntil) spawnEntity(); }, i * 85);
-        }
+        function spawnWave() { if(!playing||paused) return; const data=getDifficulty(); let amount=1; if(Math.random()<0.3+currentLevel*0.02) amount++; if(data.maxWave>=3&&Math.random()<0.3) amount++; if(data.maxWave>=4&&Math.random()<0.22) amount++; amount=Math.min(amount,data.maxWave); for(let i=0;i<amount;i++) setTimeout(()=>{ if(playing&&!paused) spawnEntity(); }, i*85); }
 
-        function spawnEntity() {
-            const data = getDifficulty(); const width = game.clientWidth; const height = game.clientHeight; const scale = Math.max(0.62, height / 520);
-            const random = Math.random(); const theme = getCurrentTheme();
-            const availableFood = theme.foods.map(e => FOOD_BY_EMOJI[e]).filter(Boolean);
-            let type = "food", item = availableFood[Math.floor(Math.random() * availableFood.length)] || FOOD[Math.floor(Math.random() * FOOD.length)];
-            if (currentMode !== "zen" && random < data.bombs) { type = "bomb"; item = { emoji:"💣", color:"#ff432f" }; }
-            else if (random < data.bombs + data.freeze) { type = "ice"; item = { emoji:"❄️", color:"#66e7ff" }; }
-            else if (random > 0.97) { type = "coin"; item = { emoji:"🪙", color:"#ffd93d" }; }
-            const element = document.createElement("div"); element.className = `entity ${type}`; element.textContent = item.emoji; entityLayer.appendChild(element);
-            const padding = Math.min(70, width * 0.13); const x = padding + Math.random() * Math.max(20, width - padding * 2); const y = height + 55; const direction = x < width / 2 ? 1 : -1;
-            const entity = { element, type, emoji: item.emoji, color: item.color, x, y,
-                vx: direction * (35 + Math.random() * 95) * data.speed * scale,
-                vy: -(620 + Math.random() * 155) * data.speed * scale,
-                rotation: Math.random() * 360, rotationSpeed: (Math.random() - 0.5) * 350,
-                radius: Math.max(24, element.offsetWidth * 0.4 || 35), destroyed: false
-            };
-            entities.push(entity); renderEntity(entity);
-        }
+        function spawnEntity() { const data=getDifficulty(); const width=game.clientWidth; const height=game.clientHeight; const scale=Math.max(0.62,height/520); const random=Math.random(); const theme=getCurrentTheme(); const availableFood=theme.foods.map(e=>FOOD_BY_EMOJI[e]).filter(Boolean); let type="food", item=availableFood[Math.floor(Math.random()*availableFood.length)]||FOOD[Math.floor(Math.random()*FOOD.length)]; if(currentMode!=="zen"&&random<data.bombs){ type="bomb"; item={emoji:"💣",color:"#ff432f"}; } else if(random<data.bombs+data.freeze){ type="ice"; item={emoji:"❄️",color:"#66e7ff"}; } else if(random>0.97){ type="coin"; item={emoji:"🪙",color:"#ffd93d"}; } const element=document.createElement("div"); element.className=`entity ${type}`; element.textContent=item.emoji; entityLayer.appendChild(element); const padding=Math.min(70,width*0.13); const x=padding+Math.random()*Math.max(20,width-padding*2); const y=height+55; const direction=x<width/2?1:-1; const initialRotation=Math.random()*360; const entity={element,type,emoji:item.emoji,color:item.color,x,y, vx:direction*(35+Math.random()*95)*data.speed*scale, vy:-(620+Math.random()*155)*data.speed*scale, rotation:initialRotation, rotationSpeed:(Math.random()-0.5)*350, radius:Math.max(24,35), destroyed:false, prevX:x, prevY:y, prevRotation:initialRotation }; entities.push(entity); }
 
-        function updateEntities(deltaTime, now) {
-            const isFrozen = now < frozenUntil;
-            const effectiveDelta = isFrozen ? deltaTime * FREEZE_SPEED_FACTOR : deltaTime;
+        // --- SMOOTH FIXED-TIMESTEP GAME LOOP ---
+        function gameLoop(now) {
+            let frameTime = (now - lastTime) / 1000;
+            if (frameTime > MAX_FRAME_TIME) frameTime = MAX_FRAME_TIME;
+            lastTime = now;
 
-            freezeOverlay.style.display = isFrozen ? "flex" : "none";
+            resizeCanvas();
+            drawTrail(now);
 
-            entities.forEach(entity => {
-                if (entity.type === "food" && !entity.destroyed) {
-                    if (isFrozen) entity.element.classList.add("frozen-food");
+            if (playing && !paused) {
+                accumulator += frameTime;
+
+                const isFrozen = now < frozenUntil;
+                freezeOverlay.style.display = isFrozen ? "flex" : "none";
+
+                const data = getDifficulty();
+                const height = game.clientHeight;
+                const scale = Math.max(0.62, height / 520);
+                const gravity = 670 * data.speed * scale;
+
+                // Fixed timestep physics updates
+                while (accumulator >= FIXED_STEP) {
+                    const effectiveStep = isFrozen ? FIXED_STEP * FREEZE_SPEED_FACTOR : FIXED_STEP;
+
+                    for (const entity of entities) {
+                        if (entity.destroyed) continue;
+                        entity.prevX = entity.x;
+                        entity.prevY = entity.y;
+                        entity.prevRotation = entity.rotation;
+
+                        entity.vy += gravity * effectiveStep;
+                        entity.x += entity.vx * effectiveStep;
+                        entity.y += entity.vy * effectiveStep;
+                        entity.rotation += entity.rotationSpeed * effectiveStep;
+
+                        if (entity.y > height + 100 && entity.vy > 0) {
+                            entity.destroyed = true;
+                        }
+                    }
+
+                    if (currentMode !== "levels") {
+                        timerElapsed += effectiveStep;
+                        if (timerElapsed >= 0.1) {
+                            timeLeft -= timerElapsed;
+                            timerElapsed = 0;
+                            pendingHudUpdate = true;
+                            if (timeLeft <= 0) {
+                                finishGame(true);
+                                accumulator = 0;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!isFrozen) {
+                        spawnElapsed += FIXED_STEP * 1000;
+                        if (spawnElapsed >= data.spawn) {
+                            spawnElapsed -= data.spawn;
+                            spawnCounter++;
+                        }
+                    }
+
+                    accumulator -= FIXED_STEP;
+                }
+
+                // Batch DOM removals
+                for (let i = entities.length - 1; i >= 0; i--) {
+                    if (entities[i].destroyed) {
+                        if (entities[i].element.parentNode) entities[i].element.remove();
+                        if (entities[i].type === "food") {
+                            combo = 1;
+                            pendingHudUpdate = true;
+                        }
+                    }
+                }
+                entities = entities.filter(e => !e.destroyed);
+
+                // Batch DOM spawns
+                for (let i = 0; i < spawnCounter; i++) spawnWave();
+                spawnCounter = 0;
+
+                // Render Interpolated positions for buttery smooth FPS
+                const alpha = accumulator / FIXED_STEP;
+                for (const entity of entities) {
+                    if (entity.destroyed) continue;
+
+                    const renderX = entity.prevX + (entity.x - entity.prevX) * alpha;
+                    const renderY = entity.prevY + (entity.y - entity.prevY) * alpha;
+                    const renderRotation = entity.prevRotation + (entity.rotation - entity.prevRotation) * alpha;
+
+                    entity.element.style.transform = `translate(${renderX}px, ${renderY}px) translate(-50%, -50%) rotate(${renderRotation}deg)`;
+
+                    if (isFrozen && entity.type === "food") entity.element.classList.add("frozen-food");
                     else entity.element.classList.remove("frozen-food");
                 }
-            });
 
-            const data = getDifficulty(); const height = game.clientHeight; const scale = Math.max(0.62, height / 520);
-            const gravity = 670 * data.speed * scale;
-
-            for (const entity of entities) {
-                if (entity.destroyed) continue;
-                entity.vy += gravity * effectiveDelta; entity.x += entity.vx * effectiveDelta; entity.y += entity.vy * effectiveDelta;
-                entity.rotation += entity.rotationSpeed * effectiveDelta;
-                renderEntity(entity);
-                if (entity.y > height + 100 && entity.vy > 0) {
-                    entity.destroyed = true; entity.element.remove();
-                    if (entity.type === "food") { combo = 1; updateHUD(); }
-                }
-            }
-            entities = entities.filter(e => !e.destroyed);
-        }
-
-        function renderEntity(entity) { entity.element.style.transform = `translate(${entity.x}px, ${entity.y}px) translate(-50%, -50%) rotate(${entity.rotation}deg)`; }
-
-        function handlePointer(event) {
-            if (!playing || paused) return;
-            if (event.pointerType === "mouse") pointerActive = true;
-            if (!pointerActive) return; event.preventDefault();
-            const rect = game.getBoundingClientRect(); const x = event.clientX - rect.left; const y = event.clientY - rect.top;
-            if (x < 0 || y < 0 || x > rect.width || y > rect.height) { previousPointer = null; return; }
-            bladeElement.style.display = "block"; bladeElement.style.left = `${x}px`; bladeElement.style.top = `${y}px`;
-            trailPoints.push({ x, y, time: performance.now() });
-            if (!previousPointer) { previousPointer = { x, y }; return; }
-
-            // Create Slash Mark Visual
-            const dist = Math.hypot(x - previousPointer.x, y - previousPointer.y);
-            if (dist > 5) {
-                const mark = document.createElement("div"); mark.className = "slash-mark";
-                const angle = Math.atan2(y - previousPointer.y, x - previousPointer.x);
-                mark.style.left = `${previousPointer.x}px`; mark.style.top = `${previousPointer.y}px`;
-                mark.style.width = `${dist}px`; mark.style.transform = `rotate(${angle}rad)`;
-                slashLayer.appendChild(mark); setTimeout(() => mark.remove(), 300);
+                if (pendingHudUpdate) { updateHUD(); pendingHudUpdate = false; }
             }
 
-            for (const entity of [...entities]) {
-                if (entity.destroyed) continue;
-                const distance = distanceToLine(entity.x, entity.y, previousPointer.x, previousPointer.y, x, y);
-                if (distance <= entity.radius + 12) sliceEntity(entity);
-            }
-            previousPointer = { x, y };
-        }
-
-        function distanceToLine(px, py, x1, y1, x2, y2) {
-            const dx = x2 - x1; const dy = y2 - y1; const len = dx * dx + dy * dy;
-            if (!len) return Math.hypot(px - x1, py - y1);
-            let amt = ((px - x1) * dx + (py - y1) * dy) / len; amt = Math.max(0, Math.min(1, amt));
-            return Math.hypot(px - (x1 + amt * dx), py - (y1 + amt * dy));
-        }
-
-        function sliceEntity(entity) {
-            if (entity.destroyed || !playing || paused) return;
-            entity.destroyed = true; entity.element.remove();
-            if (entity.type === "bomb") {
-                hearts--; combo = 1; createExplosion(entity.x, entity.y); createPopup(entity.x, entity.y, "Bomb! -1 ❤️", "danger");
-                shakeGame(); playBombSound(); if (hearts <= 0) finishGame(false); else updateHUD(); return;
-            }
-            if (entity.type === "ice") {
-                frozenUntil = performance.now() + FREEZE_TIME;
-                createParticles(entity.x, entity.y, "#69e6ff", 20); createPopup(entity.x, entity.y, "❄️ SLOW-MO 3s!", "freeze");
-                playFreezeSound(); updateHUD(); return;
-            }
-            if (entity.type === "coin") {
-                earnedCoins += 10; createParticles(entity.x, entity.y, "#ffd83d", 14); createPopup(entity.x, entity.y, "+10 🪙", "coin");
-                playCoinSound(); updateHUD(); return;
-            }
-            const points = Math.round(10 * combo * bladeMultiplier());
-            score += points; slices++; earnedCoins++;
-            bestCombo = Math.max(bestCombo, combo); combo = Math.min(12, combo + 1);
-            createSliceEffect(entity); createParticles(entity.x, entity.y, entity.color, 12); createPopup(entity.x, entity.y, `+${points} 🪙+1`);
-            playSliceSound(); updateHUD();
-            if (currentMode === "levels") { const obj = LEVELS[currentLevel - 1]; if (score >= obj.goal && slices >= obj.slices) finishGame(true); }
-        }
-
-        function createSliceEffect(entity) {
-            for (let i = 0; i < 2; i++) {
-                const copy = document.createElement("div"); copy.className = "slice-copy"; copy.textContent = entity.emoji;
-                copy.style.left = `${entity.x}px`; copy.style.top = `${entity.y}px`;
-                copy.style.setProperty("--x", i === 0 ? "-58px" : "58px"); copy.style.setProperty("--r", i === 0 ? "-165deg" : "165deg");
-                effectLayer.appendChild(copy); setTimeout(() => copy.remove(), 650);
-            }
-        }
-
-        function createParticles(x, y, color, amount) {
-            for (let i = 0; i < amount; i++) {
-                const p = document.createElement("div"); const angle = Math.random() * Math.PI * 2; const distance = 30 + Math.random() * 90;
-                p.className = "particle"; p.style.left = `${x}px`; p.style.top = `${y}px`;
-                p.style.setProperty("--color", color); p.style.setProperty("--x", `${Math.cos(angle) * distance}px`); p.style.setProperty("--y", `${Math.sin(angle) * distance}px`);
-                effectLayer.appendChild(p); setTimeout(() => p.remove(), 700);
-            }
-        }
-
-        function createExplosion(x, y) { createParticles(x, y, "#ff3b25", 16); createParticles(x, y, "#ffd53d", 16);
-            const e = document.createElement("div"); e.className = "slice-copy"; e.textContent = "💥"; e.style.left = `${x}px`; e.style.top = `${y}px`; e.style.setProperty("--x", "0px"); e.style.setProperty("--r", "45deg");
-            effectLayer.appendChild(e); setTimeout(() => e.remove(), 650);
-        }
-
-        function createPopup(x, y, text, type = "") { const p = document.createElement("div"); p.className = `popup ${type}`; p.textContent = text; p.style.left = `${x}px`; p.style.top = `${y}px`; effectLayer.appendChild(p); setTimeout(() => p.remove(), 850); }
-        function shakeGame() { game.classList.remove("shake"); void game.offsetWidth; game.classList.add("shake"); setTimeout(() => game.classList.remove("shake"), 360); }
-
-        function drawTrail(now) {
-            const duration = 150; trailPoints = trailPoints.filter(point => now - point.time < duration);
-            context.clearRect(0, 0, game.clientWidth, game.clientHeight);
-            if (trailPoints.length < 2) return;
-            const blade = currentBlade(); context.lineCap = "round"; context.lineJoin = "round";
-            for (let i = 1; i < trailPoints.length; i++) {
-                const prev = trailPoints[i - 1]; const curr = trailPoints[i]; const opacity = Math.max(0, 1 - (now - curr.time) / duration);
-                context.beginPath(); context.moveTo(prev.x, prev.y); context.lineTo(curr.x, curr.y);
-                context.strokeStyle = `rgba(255,255,255,${opacity})`; context.lineWidth = 4 + opacity * 8;
-                context.shadowBlur = 19; context.shadowColor = blade.trail; context.stroke();
-            }
-            context.shadowBlur = 0;
-        }
-
-        function resizeCanvas() {
-            const w = game.clientWidth; const h = game.clientHeight; const ratio = Math.min(window.devicePixelRatio || 1, 2);
-            const tw = Math.floor(w * ratio); const th = Math.floor(h * ratio);
-            if (trailCanvas.width !== tw || trailCanvas.height !== th) { trailCanvas.width = tw; trailCanvas.height = th; trailCanvas.style.width = `${w}px`; trailCanvas.style.height = `${h}px`; context.setTransform(ratio, 0, 0, ratio, 0, 0); }
-        }
-
-        function finishGame(success) {
-            if (!playing) return; playing = false; paused = false; pointerActive = false; previousPointer = null;
-            bladeElement.style.display = "none"; freezeOverlay.style.display = "none"; pauseOverlay.style.display = "none"; clearEntities();
-            save.coins += earnedCoins;
-            if (currentMode === "levels") { const i = currentLevel - 1; save.highScores[i] = Math.max(save.highScores[i], score);
-                if (success) { save.coins += 30 + currentLevel * 5; if (currentLevel < TOTAL_LEVELS) save.unlocked = Math.max(save.unlocked, currentLevel + 1); }
-            } else if (currentMode === "arcade") save.arcadeBest = Math.max(save.arcadeBest, score); else save.zenBest = Math.max(save.zenBest, score);
-            saveGame(); gameScreen.style.display = "none"; resultScreen.style.display = "block";
-            if (currentMode !== "levels") { resultIcon.textContent = "⏱️"; resultTitle.textContent = currentMode === "arcade" ? "Arcade Finished!" : "Zen Finished!"; resultMessage.textContent = "Time is up! Score and coins saved."; nextButton.style.display = "none"; playVictorySound(); }
-            else if (success) {
-                const finalLevel = currentLevel === TOTAL_LEVELS; const ct = LEVELS[currentLevel - 1];
-                resultIcon.textContent = finalLevel ? "👑" : "🏆"; resultTitle.textContent = finalLevel ? "Ultimate Nutrition Champion!" : "Level Complete!";
-                resultMessage.innerHTML = finalLevel ? `You completed all 15 Nutrition Themes!<br><strong>Tip:</strong> Balance, variety, moderation build healthy habits.` : `You completed <strong>${ct.icon} ${ct.name}</strong>!<br>💡 ${ct.tip}<br>Level ${currentLevel + 1} unlocked!`;
-                nextButton.style.display = finalLevel ? "none" : "inline-block"; playVictorySound();
-            } else { resultIcon.textContent = "💥"; resultTitle.textContent = "Game Over"; resultMessage.textContent = "Out of hearts. Missed fruit is safe, but avoid bombs!"; nextButton.style.display = "none"; playGameOverSound(); }
-            resultScore.innerHTML = `Score: ${score.toLocaleString()}<br>Food sliced: ${slices}<br>Best combo: x${bestCombo}<br>Coins earned: 🪙 ${earnedCoins.toLocaleString()}`;
-            createLevels(); createBladeShop();
-        }
-
-        function togglePause() { if (!playing) return; paused = !paused; previousPointer = null; pauseOverlay.style.display = paused ? "grid" : "none"; pauseButton.textContent = paused ? "▶" : "⏸"; if (paused) bladeElement.style.display = "none"; lastTime = performance.now(); }
-        function returnToMenu() { playing = false; paused = false; pointerActive = false; previousPointer = null; clearEntities(); clearEffects(); gameScreen.style.display = "none"; resultScreen.style.display = "none"; menuScreen.style.display = "block"; pauseOverlay.style.display = "none"; freezeOverlay.style.display = "none"; bladeElement.style.display = "none"; createLevels(); createBladeShop(); updateWallet(); }
-        function clearEntities() { entities.forEach(e => e.element.remove()); entities = []; entityLayer.innerHTML = ""; }
-        function clearEffects() { effectLayer.innerHTML = ""; slashLayer.innerHTML = ""; trailPoints = []; context.clearRect(0, 0, game.clientWidth, game.clientHeight); }
-
-        function gameLoop(now) {
-            const rawDelta = (now - lastTime) / 1000; const deltaTime = Math.min(rawDelta, 0.033); lastTime = now;
-            resizeCanvas(); drawTrail(now);
-            if (playing && !paused) {
-                const isFrozen = now < frozenUntil;
-                // Slow down timer during freeze
-                if (currentMode !== "levels") { timerElapsed += isFrozen ? deltaTime * FREEZE_SPEED_FACTOR : deltaTime; if (timerElapsed >= 0.1) { timeLeft -= timerElapsed; timerElapsed = 0; updateHUD(); if (timeLeft <= 0) finishGame(true); } }
-                // Pause spawn accumulation during freeze
-                if (!isFrozen) spawnElapsed += deltaTime * 1000;
-                const spawnTime = getDifficulty().spawn; if (spawnElapsed >= spawnTime) { spawnElapsed = 0; spawnWave(); }
-                updateEntities(deltaTime, now);
-            }
             requestAnimationFrame(gameLoop);
         }
 
+        function handlePointer(event) { if(!playing||paused) return; if(event.pointerType==="mouse") pointerActive=true; if(!pointerActive) return; event.preventDefault(); const rect=game.getBoundingClientRect(); const x=event.clientX-rect.left; const y=event.clientY-rect.top; if(x<0||y<0||x>rect.width||y>rect.height){ previousPointer=null; return; } bladeElement.style.display="block"; bladeElement.style.left=`${x}px`; bladeElement.style.top=`${y}px`; trailPoints.push({x,y,time:performance.now()}); if(!previousPointer){ previousPointer={x,y}; return; } const dist=Math.hypot(x-previousPointer.x,y-previousPointer.y); if(dist>5){ const mark=document.createElement("div"); mark.className="slash-mark"; const angle=Math.atan2(y-previousPointer.y,x-previousPointer.x); mark.style.left=`${previousPointer.x}px`; mark.style.top=`${previousPointer.y}px`; mark.style.width=`${dist}px`; mark.style.transform=`rotate(${angle}rad)`; slashLayer.appendChild(mark); setTimeout(()=>mark.remove(),300); } for(const entity of [...entities]){ if(entity.destroyed) continue; const distance=distanceToLine(entity.x,entity.y,previousPointer.x,previousPointer.y,x,y); if(distance<=entity.radius+12) sliceEntity(entity); } previousPointer={x,y}; }
+        function distanceToLine(px,py,x1,y1,x2,y2) { const dx=x2-x1; const dy=y2-y1; const len=dx*dx+dy*dy; if(!len) return Math.hypot(px-x1,py-y1); let amt=((px-x1)*dx+(py-y1)*dy)/len; amt=Math.max(0,Math.min(1,amt)); return Math.hypot(px-(x1+amt*dx),py-(y1+amt*dy)); }
+
+        function sliceEntity(entity) { if(entity.destroyed||!playing||paused) return; entity.destroyed=true; entity.element.remove(); if(entity.type==="bomb"){ hearts--; combo=1; createExplosion(entity.x,entity.y); createPopup(entity.x,entity.y,"Bomb! -1 ❤️","danger"); shakeGame(); playBombSound(); if(hearts<=0) finishGame(false); else updateHUD(); return; } if(entity.type==="ice"){ frozenUntil=performance.now()+FREEZE_TIME; createParticles(entity.x,entity.y,"#69e6ff",20); createPopup(entity.x,entity.y,"❄️ SLOW-MO 3s!","freeze"); playFreezeSound(); updateHUD(); return; } if(entity.type==="coin"){ earnedCoins+=10; createParticles(entity.x,entity.y,"#ffd83d",14); createPopup(entity.x,entity.y,"+10 🪙","coin"); playCoinSound(); updateHUD(); return; } const points=Math.round(10*combo*bladeMultiplier()); score+=points; slices++; earnedCoins++; bestCombo=Math.max(bestCombo,combo); combo=Math.min(12,combo+1); createSliceEffect(entity); createParticles(entity.x,entity.y,entity.color,12); createPopup(entity.x,entity.y,`+${points} 🪙+1`); playSliceSound(); updateHUD(); if(currentMode==="levels"){ const obj=LEVELS[currentLevel-1]; if(score>=obj.goal&&slices>=obj.slices) finishGame(true); } }
+
+        function createSliceEffect(entity) { for(let i=0;i<2;i++){ const copy=document.createElement("div"); copy.className="slice-copy"; copy.textContent=entity.emoji; copy.style.left=`${entity.x}px`; copy.style.top=`${entity.y}px`; copy.style.setProperty("--x",i===0?"-58px":"58px"); copy.style.setProperty("--r",i===0?"-165deg":"165deg"); effectLayer.appendChild(copy); setTimeout(()=>copy.remove(),650); } }
+        function createParticles(x,y,color,amount) { for(let i=0;i<amount;i++){ const p=document.createElement("div"); const angle=Math.random()*Math.PI*2; const distance=30+Math.random()*90; p.className="particle"; p.style.left=`${x}px`; p.style.top=`${y}px`; p.style.setProperty("--color",color); p.style.setProperty("--x",`${Math.cos(angle)*distance}px`); p.style.setProperty("--y",`${Math.sin(angle)*distance}px`); effectLayer.appendChild(p); setTimeout(()=>p.remove(),700); } }
+        function createExplosion(x,y) { createParticles(x,y,"#ff3b25",16); createParticles(x,y,"#ffd53d",16); const e=document.createElement("div"); e.className="slice-copy"; e.textContent="💥"; e.style.left=`${x}px`; e.style.top=`${y}px`; e.style.setProperty("--x","0px"); e.style.setProperty("--r","45deg"); effectLayer.appendChild(e); setTimeout(()=>e.remove(),650); }
+        function createPopup(x,y,text,type="") { const p=document.createElement("div"); p.className=`popup ${type}`; p.textContent=text; p.style.left=`${x}px`; p.style.top=`${y}px`; effectLayer.appendChild(p); setTimeout(()=>p.remove(),850); }
+        function shakeGame() { game.classList.remove("shake"); void game.offsetWidth; game.classList.add("shake"); setTimeout(()=>game.classList.remove("shake"),360); }
+
+        function drawTrail(now) { const duration=150; trailPoints=trailPoints.filter(point=>now-point.time<duration); context.clearRect(0,0,game.clientWidth,game.clientHeight); if(trailPoints.length<2) return; const blade=currentBlade(); context.lineCap="round"; context.lineJoin="round"; for(let i=1;i<trailPoints.length;i++){ const prev=trailPoints[i-1]; const curr=trailPoints[i]; const opacity=Math.max(0,1-(now-curr.time)/duration); context.beginPath(); context.moveTo(prev.x,prev.y); context.lineTo(curr.x,curr.y); context.strokeStyle=`rgba(255,255,255,${opacity})`; context.lineWidth=4+opacity*8; context.shadowBlur=19; context.shadowColor=blade.trail; context.stroke(); } context.shadowBlur=0; }
+        function resizeCanvas() { const w=game.clientWidth; const h=game.clientHeight; const ratio=Math.min(window.devicePixelRatio||1,2); const tw=Math.floor(w*ratio); const th=Math.floor(h*ratio); if(trailCanvas.width!==tw||trailCanvas.height!==th){ trailCanvas.width=tw; trailCanvas.height=th; trailCanvas.style.width=`${w}px`; trailCanvas.style.height=`${h}px`; context.setTransform(ratio,0,0,ratio,0,0); } }
+
+        function finishGame(success) {
+            if(!playing) return; playing=false; paused=false; pointerActive=false; previousPointer=null;
+            bladeElement.style.display="none"; freezeOverlay.style.display="none"; pauseOverlay.style.display="none"; clearEntities();
+            save.coins+=earnedCoins;
+            if(currentMode==="levels"){ const i=currentLevel-1; save.highScores[i]=Math.max(save.highScores[i],score); if(success){ save.coins+=30+currentLevel*5; if(currentLevel<TOTAL_LEVELS) save.unlocked=Math.max(save.unlocked,currentLevel+1); } } else if(currentMode==="arcade") save.arcadeBest=Math.max(save.arcadeBest,score); else save.zenBest=Math.max(save.zenBest,score);
+            saveGame(); gameScreen.style.display="none"; resultScreen.style.display="block";
+            if(currentMode!=="levels"){ resultIcon.textContent="⏱️"; resultTitle.textContent=currentMode==="arcade"?"Arcade Finished!":"Zen Finished!"; resultMessage.textContent="Time is up! Score and coins saved."; nextButton.style.display="none"; playVictorySound(); }
+            else if(success){ const finalLevel=currentLevel===TOTAL_LEVELS; const ct=LEVELS[currentLevel-1]; resultIcon.textContent=finalLevel?"👑":"🏆"; resultTitle.textContent=finalLevel?"Ultimate Nutrition Champion!":"Level Complete!"; resultMessage.innerHTML=finalLevel?`You completed all 15 Nutrition Themes!<br><strong>Tip:</strong> Balance, variety, moderation build healthy habits.`:`You completed <strong>${ct.icon} ${ct.name}</strong>!<br>💡 ${ct.tip}<br>Level ${currentLevel+1} unlocked!`; nextButton.style.display=finalLevel?"none":"inline-block"; playVictorySound(); }
+            else { resultIcon.textContent="💥"; resultTitle.textContent="Game Over"; resultMessage.textContent="Out of hearts. Missed fruit is safe, but avoid bombs!"; nextButton.style.display="none"; playGameOverSound(); }
+            resultScore.innerHTML=`Score: ${score.toLocaleString()}<br>Food sliced: ${slices}<br>Best combo: x${bestCombo}<br>Coins earned: 🪙 ${earnedCoins.toLocaleString()}`;
+            createLevels(); createBladeShop();
+            document.documentElement.classList.remove('lock-scroll');
+        }
+
+        function togglePause() { if(!playing) return; paused=!paused; previousPointer=null; pauseOverlay.style.display=paused?"grid":"none"; pauseButton.textContent=paused?"▶":"⏸"; if(paused) bladeElement.style.display="none"; lastTime=performance.now(); accumulator=0; }
+        function returnToMenu() { playing=false; paused=false; pointerActive=false; previousPointer=null; clearEntities(); clearEffects(); gameScreen.style.display="none"; resultScreen.style.display="none"; menuScreen.style.display="block"; pauseOverlay.style.display="none"; freezeOverlay.style.display="none"; bladeElement.style.display="none"; createLevels(); createBladeShop(); updateWallet(); document.documentElement.classList.remove('lock-scroll'); }
+        function clearEntities() { entities.forEach(e=>e.element.remove()); entities=[]; entityLayer.innerHTML=""; }
+        function clearEffects() { effectLayer.innerHTML=""; slashLayer.innerHTML=""; trailPoints=[]; context.clearRect(0,0,game.clientWidth,game.clientHeight); }
+
         // --- AUDIO ENGINE ---
-        function initAudio() { if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)(); if (audioContext.state === 'suspended') audioContext.resume(); }
-        function playNoise(duration, volume=0.05) {
-            if (muted) return; initAudio();
-            const bufferSize = audioContext.sampleRate * duration; const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
-            const data = buffer.getChannelData(0); for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-            const source = audioContext.createBufferSource(); source.buffer = buffer;
-            const gain = audioContext.createGain(); gain.gain.setValueAtTime(volume, audioContext.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
-            source.connect(gain); gain.connect(audioContext.destination); source.start(); source.stop(audioContext.currentTime + duration);
-        }
-        function playTone(freq, dur, type='sine', vol=0.04) {
-            if (muted) return; initAudio();
-            const osc = audioContext.createOscillator(); const gain = audioContext.createGain(); const now = audioContext.currentTime;
-            osc.type = type; osc.frequency.setValueAtTime(freq, now); gain.gain.setValueAtTime(vol, now); gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
-            osc.connect(gain); gain.connect(audioContext.destination); osc.start(now); osc.stop(now + dur);
-        }
-        function playSliceSound() { playNoise(0.04, 0.08); playTone(800, 0.05, 'sine', 0.04); }
-        function playBombSound() { playNoise(0.3, 0.15); playTone(60, 0.4, 'sawtooth', 0.12); }
-        function playFreezeSound() { playTone(1200, 0.2, 'sine', 0.08); playTone(800, 0.15, 'triangle', 0.06); playNoise(0.1, 0.05); }
-        function playCoinSound() { playTone(1200, 0.08, 'sine', 0.06); setTimeout(() => playTone(1800, 0.08, 'sine', 0.06), 50); }
-        function playBuySound() { playTone(600, 0.1, 'sine', 0.05); playTone(900, 0.15, 'sine', 0.05); }
-        function playLevelStartSound() { playTone(400, 0.1, 'sine', 0.05); setTimeout(() => playTone(600, 0.1, 'sine', 0.05), 100); setTimeout(() => playTone(800, 0.15, 'sine', 0.05), 200); }
-        function playVictorySound() { [420, 540, 670, 850].forEach((f, i) => setTimeout(() => { playTone(f, 0.2, 'sine', 0.06); playNoise(0.05, 0.02); }, i * 120)); }
-        function playGameOverSound() { [400, 300, 200, 100].forEach((f, i) => setTimeout(() => playTone(f, 0.2, 'sawtooth', 0.06), i * 150)); }
+        function initAudio() { if(!audioContext) audioContext=new (window.AudioContext||window.webkitAudioContext)(); if(audioContext.state==='suspended') audioContext.resume(); }
+        function playNoise(duration,volume=0.05) { if(muted) return; initAudio(); const bufferSize=audioContext.sampleRate*duration; const buffer=audioContext.createBuffer(1,bufferSize,audioContext.sampleRate); const data=buffer.getChannelData(0); for(let i=0;i<bufferSize;i++) data[i]=Math.random()*2-1; const source=audioContext.createBufferSource(); source.buffer=buffer; const gain=audioContext.createGain(); gain.gain.setValueAtTime(volume,audioContext.currentTime); gain.gain.exponentialRampToValueAtTime(0.001,audioContext.currentTime+duration); source.connect(gain); gain.connect(audioContext.destination); source.start(); source.stop(audioContext.currentTime+duration); }
+        function playTone(freq,dur,type='sine',vol=0.04) { if(muted) return; initAudio(); const osc=audioContext.createOscillator(); const gain=audioContext.createGain(); const now=audioContext.currentTime; osc.type=type; osc.frequency.setValueAtTime(freq,now); gain.gain.setValueAtTime(vol,now); gain.gain.exponentialRampToValueAtTime(0.001,now+dur); osc.connect(gain); gain.connect(audioContext.destination); osc.start(now); osc.stop(now+dur); }
+        function playSliceSound() { playNoise(0.04,0.08); playTone(800,0.05,'sine',0.04); }
+        function playBombSound() { playNoise(0.3,0.15); playTone(60,0.4,'sawtooth',0.12); }
+        function playFreezeSound() { playTone(1200,0.2,'sine',0.08); playTone(800,0.15,'triangle',0.06); playNoise(0.1,0.05); }
+        function playCoinSound() { playTone(1200,0.08,'sine',0.06); setTimeout(()=>playTone(1800,0.08,'sine',0.06),50); }
+        function playBuySound() { playTone(600,0.1,'sine',0.05); playTone(900,0.15,'sine',0.05); }
+        function playLevelStartSound() { playTone(400,0.1,'sine',0.05); setTimeout(()=>playTone(600,0.1,'sine',0.05),100); setTimeout(()=>playTone(800,0.15,'sine',0.05),200); }
+        function playVictorySound() { [420,540,670,850].forEach((f,i)=>setTimeout(()=>{ playTone(f,0.2,'sine',0.06); playNoise(0.05,0.02); },i*120)); }
+        function playGameOverSound() { [400,300,200,100].forEach((f,i)=>setTimeout(()=>playTone(f,0.2,'sawtooth',0.06),i*150)); }
 
         // --- EVENT LISTENERS ---
-        game.addEventListener("pointerdown", event => { pointerActive = true; previousPointer = null; try { game.setPointerCapture(event.pointerId); } catch {} handlePointer(event); });
-        game.addEventListener("pointermove", handlePointer);
-        game.addEventListener("pointerup", event => { if (event.pointerType !== "mouse") { pointerActive = false; bladeElement.style.display = "none"; } previousPointer = null; });
-        game.addEventListener("pointercancel", () => { pointerActive = false; previousPointer = null; bladeElement.style.display = "none"; });
-        game.addEventListener("pointerleave", event => { if (event.pointerType === "mouse") { pointerActive = false; previousPointer = null; bladeElement.style.display = "none"; } });
-        document.querySelectorAll(".mode-button").forEach(b => b.addEventListener("click", () => selectMode(b.dataset.mode)));
-        soundButton.addEventListener("click", () => { muted = !muted; soundButton.textContent = muted ? "🔇" : "🔊"; });
-        pauseButton.addEventListener("click", togglePause); exitButton.addEventListener("click", returnToMenu); menuButton.addEventListener("click", returnToMenu);
-        replayButton.addEventListener("click", () => startGame(currentLevel)); nextButton.addEventListener("click", () => startGame(Math.min(TOTAL_LEVELS, currentLevel + 1)));
-        window.addEventListener("resize", resizeCanvas);
-        document.addEventListener("keydown", event => { if (event.key === "Escape" && playing) togglePause(); });
-        document.addEventListener("visibilitychange", () => { if (document.hidden && playing && !paused) togglePause(); });
+        game.addEventListener("pointerdown",event=>{ pointerActive=true; previousPointer=null; try{ game.setPointerCapture(event.pointerId); } catch{} handlePointer(event); });
+        game.addEventListener("pointermove",handlePointer);
+        game.addEventListener("pointerup",event=>{ if(event.pointerType!=="mouse"){ pointerActive=false; bladeElement.style.display="none"; } previousPointer=null; });
+        game.addEventListener("pointercancel",()=>{ pointerActive=false; previousPointer=null; bladeElement.style.display="none"; });
+        game.addEventListener("pointerleave",event=>{ if(event.pointerType==="mouse"){ pointerActive=false; previousPointer=null; bladeElement.style.display="none"; } });
+        document.querySelectorAll(".mode-button").forEach(b=>b.addEventListener("click",()=>selectMode(b.dataset.mode)));
+        soundButton.addEventListener("click",()=>{ muted=!muted; soundButton.textContent=muted?"🔇":"🔊"; });
+        pauseButton.addEventListener("click",togglePause); exitButton.addEventListener("click",returnToMenu); menuButton.addEventListener("click",returnToMenu);
+        replayButton.addEventListener("click",()=>startGame(currentLevel)); nextButton.addEventListener("click",()=>startGame(Math.min(TOTAL_LEVELS,currentLevel+1)));
+        window.addEventListener("resize",resizeCanvas);
+        document.addEventListener("keydown",event=>{ if(event.key==="Escape"&&playing) togglePause(); });
+        document.addEventListener("visibilitychange",()=>{ if(document.hidden&&playing&&!paused) togglePause(); });
 
         createLevels(); createBladeShop(); updateWallet(); requestAnimationFrame(gameLoop);
     </script>
